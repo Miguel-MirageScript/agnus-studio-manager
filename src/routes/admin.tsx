@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Logo } from "@/components/brand/Logo";
@@ -53,6 +53,15 @@ function AdminLogin() {
           <p className="text-[10px] text-muted-foreground mt-4 text-center">
             Demo: <code className="font-mono">admin</code> / <code className="font-mono">agnus1993</code>
           </p>
+          <div className="mt-6 pt-5 border-t border-black/5 flex justify-center">
+            <Link
+              to="/"
+              className="group inline-flex items-center gap-2 text-[11px] tracking-brand uppercase text-muted-foreground hover:text-[color:var(--gold)] transition"
+            >
+              <Icon icon="ph:arrow-left" className="w-3.5 h-3.5 transition group-hover:-translate-x-0.5" />
+              Voltar para o Catálogo
+            </Link>
+          </div>
         </form>
       </div>
     </div>
