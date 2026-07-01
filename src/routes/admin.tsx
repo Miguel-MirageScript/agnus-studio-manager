@@ -2,7 +2,12 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Logo } from "@/components/brand/Logo";
-import { supabase } from "@/integrations/supabase/client"; // Cliente do Supabase do seu projeto
+import { createClient } from "@supabase/supabase-js";
+
+// Inicialização direta do cliente utilizando as variáveis de ambiente configuradas na Cloudflare
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const Route = createFileRoute("/admin")({
   component: AdminLogin,
@@ -15,7 +20,7 @@ function AdminLogin() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Verifica se o usuário já tem uma sessão ativa no Supabase para pular o login
+  // Verifica se o usuário já possui uma sessão válida ativa para pular a tela de login
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -30,7 +35,7 @@ function AdminLogin() {
     setErr("");
 
     try {
-      // Faz o login real batendo lá no banco do Supabase
+      // Autenticação real integrada diretamente ao seu banco Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email: user,
         password: pass,
