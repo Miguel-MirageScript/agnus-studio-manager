@@ -12,16 +12,16 @@ export function Footer() {
           </div>
           <a href="https://instagram.com/agnus.1993" target="_blank" rel="noreferrer" className="group flex items-start gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 group-hover:border-[color:var(--gold)] transition">
-              <Icon icon="line-md:instagram" className="w-5 h-5 group-hover:text-[color:var(--gold)]" />
+              <Icon icon="ri:instagram-line" className="w-5 h-5 group-hover:text-[color:var(--gold)]" />
             </span>
             <span className="text-sm">
               <span className="block text-foreground font-medium">@agnus.1993</span>
               <span className="text-muted-foreground text-xs">Instagram</span>
             </span>
           </a>
-          <a href="https://wa.me/5511999999999" target="_blank" rel="noreferrer" className="group flex items-start gap-3">
+          <a href="https://wa.me/5511932212697" target="_blank" rel="noreferrer" className="group flex items-start gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 group-hover:border-[color:var(--whatsapp)] transition">
-              <Icon icon="line-md:chat-round" className="w-5 h-5 group-hover:text-[color:var(--whatsapp)]" />
+              <Icon icon="logos:whatsapp-icon" className="w-5 h-5" />
             </span>
             <span className="text-sm">
               <span className="block text-foreground font-medium">Atendimento</span>
