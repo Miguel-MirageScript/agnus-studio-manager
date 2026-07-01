@@ -8,28 +8,30 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminLogin() {
+  const navigate = useNavigate();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const session = localStorage.getItem("agnus_admin_session");
-      if (session) {
-        window.location.href = "/admin/panel";
-      }
+    const session = localStorage.getItem("agnus_admin_session");
+    if (session) {
+      navigate({ to: "/admin/panel" });
     }
-  }, []);
+  }, [navigate]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setErr("");
 
-    // LIBERAÇÃO TOTAL: Ativa a sessão e redireciona direto no clique, independente do que for digitado
+    // Salva a sessão local no formato esperado pelo catálogo
     localStorage.setItem("agnus_admin_session", "bypass_active_session");
-    window.location.href = "/admin/panel";
+    
+    // Redirecionamento oficial resolvido pelo roteador do TanStack
+    navigate({ to: "/admin/panel" });
+    setLoading(false);
   }
 
   return (
