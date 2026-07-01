@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Logo } from "@/components/brand/Logo";
-import { isAdmin, signIn } from "@/lib/admin-auth";
+import { supabase } from "@/integrations/supabase/client"; // Cliente do Supabase do seu projeto
 
 export const Route = createFileRoute("/admin")({
   component: AdminLogin,
@@ -13,17 +13,41 @@ function AdminLogin() {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // Verifica se o usuário já tem uma sessão ativa no Supabase para pular o login
   useEffect(() => {
-    if (isAdmin()) nav({ to: "/admin/panel" });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        nav({ to: "/admin/panel" });
+      }
+    });
   }, [nav]);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (signIn(user, pass)) {
-      nav({ to: "/admin/panel" });
-    } else {
-      setErr("Credenciais inválidas.");
+    setLoading(true);
+    setErr("");
+
+    try {
+      // Faz o login real batendo lá no banco do Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: user,
+        password: pass,
+      });
+
+      if (error) {
+        setErr("Credenciais inválidas.");
+        return;
+      }
+
+      if (data?.user) {
+        nav({ to: "/admin/panel" });
+      }
+    } catch (catchErr) {
+      setErr("Erro ao conectar com o servidor.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -40,19 +64,38 @@ function AdminLogin() {
         <form onSubmit={submit} className="rounded-2xl border border-black/10 bg-white p-8 shadow-xl">
           <h1 className="font-display text-2xl mb-1">Acesso Restrito</h1>
           <p className="text-sm text-muted-foreground mb-6">Somente usuários autorizados. Não há cadastro público.</p>
-          <label className="block text-xs tracking-brand uppercase mb-1.5">Usuário</label>
-          <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username"
-            className="w-full mb-4 border border-black/15 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-foreground" />
+          
+          <label className="block text-xs tracking-brand uppercase mb-1.5">Usuário (E-mail)</label>
+          <input 
+            type="email"
+            value={user} 
+            onChange={(e) => setUser(e.target.value)} 
+            autoComplete="username"
+            placeholder="seu-email@gmail.com"
+            disabled={loading}
+            className="w-full mb-4 border border-black/15 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-foreground" 
+          />
+          
           <label className="block text-xs tracking-brand uppercase mb-1.5">Senha</label>
-          <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="current-password"
-            className="w-full mb-4 border border-black/15 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-foreground" />
+          <input 
+            type="password" 
+            value={pass} 
+            onChange={(e) => setPass(e.target.value)} 
+            autoComplete="current-password"
+            disabled={loading}
+            className="w-full mb-4 border border-black/15 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-foreground" 
+          />
+          
           {err && <p className="text-xs text-red-600 mb-3">{err}</p>}
-          <button className="w-full bg-foreground text-background rounded-md py-3 text-xs tracking-brand uppercase font-semibold hover:bg-[color:var(--gold)] transition">
-            Entrar
+          
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full bg-foreground text-background rounded-md py-3 text-xs tracking-brand uppercase font-semibold hover:bg-[color:var(--gold)] transition disabled:opacity-50"
+          >
+            {loading ? "Carregando..." : "Entrar"}
           </button>
-          <p className="text-[10px] text-muted-foreground mt-4 text-center">
-            Demo: <code className="font-mono">admin</code> / <code className="font-mono">agnus1993</code>
-          </p>
+          
           <div className="mt-6 pt-5 border-t border-black/5 flex justify-center">
             <Link
               to="/"
