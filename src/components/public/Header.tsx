@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Link } from "@tanstack/react-router";
+
 import { Logo } from "@/components/brand/Logo";
 
 export function Header() {
