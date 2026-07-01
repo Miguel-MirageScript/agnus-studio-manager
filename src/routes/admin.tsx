@@ -1,34 +1,45 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Logo } from "@/components/brand/Logo";
 
 export const Route = createFileRoute("/admin")({
-  component: AdminLogin,
+  component: AdminGuard,
 });
 
-function AdminLogin() {
+function AdminGuard() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Verifica se a URL atual é a do painel para saber se deve renderizar o filho
+  const isPanel = location.pathname.includes("/admin/panel");
+  
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authOk, setAuthOk] = useState(false);
 
   useEffect(() => {
-    // Se o token do Supabase já existir, pula a tela de login
-    if (typeof window !== "undefined" && localStorage.getItem("agnus_admin_session")) {
-      window.location.href = "/admin/panel";
+    const token = localStorage.getItem("agnus_admin_session");
+    if (token) {
+      setAuthOk(true);
+      // Se tiver token mas estiver apenas na tela /admin, empurra pro painel internamente
+      if (!isPanel) {
+        navigate({ to: "/admin/panel" as any, replace: true });
+      }
+    } else {
+      setAuthOk(false);
     }
-  }, []);
+  }, [isPanel, navigate]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setErr("");
 
-    const email = user.trim(); // Limpa espaços invisíveis do teclado
+    const email = user.trim();
     const password = pass;
-
-    // Conexão direta com a sua API do Supabase
     const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
 
@@ -46,20 +57,27 @@ function AdminLogin() {
       const data = await response.json();
 
       if (response.ok && data.access_token) {
-        // Sucesso! Guarda o token oficial e abre o painel
         localStorage.setItem("agnus_admin_session", data.access_token);
-        window.location.href = "/admin/panel";
+        setAuthOk(true);
+        // Navegação suave do TanStack, sem recarregar a página (acaba com a tela piscando)
+        navigate({ to: "/admin/panel" as any });
       } else {
-        // Mostra o erro exato que o Supabase retornar (ex: senha errada)
         setErr(data.error_description || "Credenciais recusadas pelo banco de dados.");
       }
     } catch (error) {
-      setErr("Falha de conexão. O servidor do Supabase está inacessível.");
+      setErr("Falha de conexão com o servidor do Supabase.");
     } finally {
       setLoading(false);
     }
   }
 
+  // A MÁGICA ACONTECE AQUI:
+  // Se está autenticado e a URL for do painel, ele renderiza o arquivo admin.panel.tsx através do Outlet!
+  if (authOk && isPanel) {
+    return <Outlet />;
+  }
+
+  // Caso contrário, mostra o formulário normalmente
   return (
     <div className="min-h-screen bg-[oklch(0.97_0.005_85)] bg-grid flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
