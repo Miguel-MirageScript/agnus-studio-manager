@@ -1,0 +1,13 @@
+{
+  "name": "central-da-estampa",
+  "compatibility_date": "2024-11-01",
+  
+  // ADICIONE ESTA LINHA ABAIXO PARA LIBERAR O USO DE MÓDULOS DO NODE:
+  "compatibility_flags": [ "nodejs_compat" ],
+  
+  "main": "dist/server/server.js",
+  "assets": {
+    "directory": "dist/client",
+    "binding": "ASSETS"
+  }
+}
