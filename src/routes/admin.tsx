@@ -2,12 +2,6 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Logo } from "@/components/brand/Logo";
-import { createClient } from "@supabase/supabase-js";
-
-// Inicialização direta do cliente utilizando as variáveis de ambiente configuradas na Cloudflare
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const Route = createFileRoute("/admin")({
   component: AdminLogin,
@@ -20,13 +14,12 @@ function AdminLogin() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Verifica se o usuário já possui uma sessão válida ativa para pular a tela de login
+  // Se o token de login já existir no navegador, redireciona direto
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        nav({ to: "/admin/panel" });
-      }
-    });
+    const session = localStorage.getItem("agnus_admin_session");
+    if (session) {
+      nav({ to: "/admin/panel" });
+    }
   }, [nav]);
 
   async function submit(e: React.FormEvent) {
@@ -34,19 +27,33 @@ function AdminLogin() {
     setLoading(true);
     setErr("");
 
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
     try {
-      // Autenticação real integrada diretamente ao seu banco Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: user,
-        password: pass,
+      // Faz uma requisição direta para a API de autenticação do seu Supabase
+      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          email: user,
+          password: pass,
+        }),
       });
 
-      if (error) {
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
         setErr("Credenciais inválidas.");
         return;
       }
 
-      if (data?.user) {
+      if (data.access_token) {
+        // Salva a sessão localmente e libera o acesso ao painel
+        localStorage.setItem("agnus_admin_session", data.access_token);
         nav({ to: "/admin/panel" });
       }
     } catch (catchErr) {
