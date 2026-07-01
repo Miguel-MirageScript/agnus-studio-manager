@@ -16,9 +16,8 @@ export function HeroLookbook() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center px-6">
-          <h1 className="font-display text-[13vw] md:text-[9vw] leading-none font-bold tracking-tighter text-transparent"
-            style={{ WebkitTextStroke: "1.5px oklch(0.15 0 0)" }}>
-            LOOKBOOK<span className="text-foreground" style={{ WebkitTextStroke: "0" }}>.93.</span>
+          <h1 className="font-display text-[13vw] md:text-[9vw] leading-none font-bold tracking-tighter text-foreground">
+            LOOKBOOK<span className="text-[color:var(--gold)]">.</span>
           </h1>
         </div>
         <div className="absolute bottom-4 left-4 md:bottom-6 md:left-8 flex gap-2">
