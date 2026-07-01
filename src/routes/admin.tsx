@@ -14,12 +14,9 @@ function AdminLogin() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Verifica se já existe sessão de forma simples
-    if (typeof window !== "undefined") {
-      const session = localStorage.getItem("agnus_admin_session");
-      if (session === "bypass_active_session") {
-        window.location.href = "/admin/panel";
-      }
+    // Se o token do Supabase já existir, pula a tela de login
+    if (typeof window !== "undefined" && localStorage.getItem("agnus_admin_session")) {
+      window.location.href = "/admin/panel";
     }
   }, []);
 
@@ -28,18 +25,39 @@ function AdminLogin() {
     setLoading(true);
     setErr("");
 
-    const cleanEmail = user.trim().toLowerCase();
-    const cleanPassword = pass;
+    const email = user.trim(); // Limpa espaços invisíveis do teclado
+    const password = pass;
 
-    // Login direto local para evitar requisições assíncronas bloqueantes no carregamento
-    if (cleanEmail === "suport.agnus@gmail.com" && cleanPassword === "miguel05109321") {
-      localStorage.setItem("agnus_admin_session", "bypass_active_session");
-      window.location.href = "/admin/panel";
-      return;
+    // Conexão direta com a sua API do Supabase
+    const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
+
+    try {
+      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.access_token) {
+        // Sucesso! Guarda o token oficial e abre o painel
+        localStorage.setItem("agnus_admin_session", data.access_token);
+        window.location.href = "/admin/panel";
+      } else {
+        // Mostra o erro exato que o Supabase retornar (ex: senha errada)
+        setErr(data.error_description || "Credenciais recusadas pelo banco de dados.");
+      }
+    } catch (error) {
+      setErr("Falha de conexão. O servidor do Supabase está inacessível.");
+    } finally {
+      setLoading(false);
     }
-
-    setErr("Credenciais inválidas para o acesso local.");
-    setLoading(false);
   }
 
   return (
@@ -55,11 +73,11 @@ function AdminLogin() {
         
         <form onSubmit={submit} className="rounded-2xl border border-black/10 bg-white p-8 shadow-xl">
           <h1 className="font-display text-2xl mb-1">Acesso Restrito</h1>
-          <p className="text-sm text-muted-foreground mb-6">Somente usuários autorizados. Não há cadastro público.</p>
+          <p className="text-sm text-muted-foreground mb-6">Autenticação oficial via Supabase.</p>
           
           <label className="block text-xs tracking-brand uppercase mb-1.5">Usuário (E-mail)</label>
           <input 
-            type="text"
+            type="email"
             value={user} 
             onChange={(e) => setUser(e.target.value)} 
             placeholder="seu-email@gmail.com"
@@ -87,7 +105,7 @@ function AdminLogin() {
             disabled={loading}
             className="w-full bg-foreground text-background rounded-md py-3 text-xs tracking-brand uppercase font-semibold hover:bg-[color:var(--gold)] transition"
           >
-            {loading ? "Acedendo..." : "Entrar"}
+            {loading ? "Autenticando..." : "Entrar"}
           </button>
           
           <div className="mt-6 pt-5 border-t border-black/5 flex justify-center">
