@@ -70,6 +70,6 @@ export const PRODUCTS: Product[] = [
   },
 ];
 
-export const WHATSAPP_NUMBER = "5511999999999";
+export const WHATSAPP_NUMBER = "5511932212697";
 export const WHATSAPP_LINK = (productName: string) =>
-  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Tenho interesse na ${productName} da AGNUS.1993`)}`;
+  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Gostaria de negociar a camiseta *${productName}* que vi no catálogo.`)}`;
