@@ -1,24 +1,44 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Header } from "@/components/public/Header";
+import { HeroLookbook } from "@/components/public/HeroLookbook";
+import { ProductCard } from "@/components/public/ProductCard";
+import { QuickFilters, type FilterKey } from "@/components/public/QuickFilters";
+import { LookbookLoop } from "@/components/public/LookbookLoop";
+import { Footer } from "@/components/public/Footer";
+import { PRODUCTS } from "@/lib/products";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  component: HomePage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function HomePage() {
+  const [filter, setFilter] = useState<FilterKey>("todos");
+  const filtered = useMemo(
+    () => (filter === "todos" ? PRODUCTS : PRODUCTS.filter((p) => p.filters.includes(filter as any))),
+    [filter]
+  );
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-background bg-grid">
+      <Header />
+      <HeroLookbook />
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-8">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.slice(0, 3).map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      </section>
+      <QuickFilters active={filter} onChange={setFilter} />
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-8">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.slice(3).map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      </section>
+      <LookbookLoop />
+      <Footer />
     </div>
   );
 }
