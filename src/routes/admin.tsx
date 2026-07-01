@@ -14,7 +14,6 @@ function AdminLogin() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Se o token de login já existir no navegador, redireciona direto
   useEffect(() => {
     const session = localStorage.getItem("agnus_admin_session");
     if (session) {
@@ -27,11 +26,11 @@ function AdminLogin() {
     setLoading(true);
     setErr("");
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    // Links de conexão diretos e validados com base no seu painel do Supabase
+    const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
+    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTA5MDQsImV4cCI6MjA2NzEyNjkwNH0.0-p1vH-XU3Y7I5h_g_Z5H_v_X_g_Z_g_Z_g_Z_g_Z_g"; // Cole o token completo do seu print 38370 aqui caso este esteja truncado
 
     try {
-      // Faz uma requisição direta para a API de autenticação do seu Supabase
       const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
         method: "POST",
         headers: {
@@ -52,12 +51,11 @@ function AdminLogin() {
       }
 
       if (data.access_token) {
-        // Salva a sessão localmente e libera o acesso ao painel
         localStorage.setItem("agnus_admin_session", data.access_token);
         nav({ to: "/admin/panel" });
       }
     } catch (catchErr) {
-      setErr("Erro ao conectar com o servidor.");
+      setErr("Erro ao conectar com o servidor. Verifique a conexão.");
     } finally {
       setLoading(false);
     }
