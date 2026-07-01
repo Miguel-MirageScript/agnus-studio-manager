@@ -1,46 +1,45 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Logo } from "@/components/brand/Logo";
+
+// Importa o componente do painel real diretamente da sua pasta administrativa
+import AdminPanelComponent from "./admin.panel"; 
 
 export const Route = createFileRoute("/admin")({
   component: AdminLogin,
 });
 
 function AdminLogin() {
-  const navigate = useNavigate();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
-  const [err, setErr] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Se já tiver logado antes, pula a tela de login direto em memória
   useEffect(() => {
     const session = localStorage.getItem("agnus_admin_session");
-    if (session) {
-      // Tenta redirecionar usando o mapeamento do TanStack para arquivos com ponto
-      navigate({ to: "/admin/panel" as any });
+    if (session === "bypass_active_session") {
+      setIsAuthenticated(true);
     }
-  }, [navigate]);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setErr("");
 
-    // Ativa o bypass local direto
+    // Bypass imediato no clique
     localStorage.setItem("agnus_admin_session", "bypass_active_session");
-    
-    try {
-      // Força a navegação exata aceita pelo arquivo admin.panel.tsx
-      await navigate({ to: "/admin/panel" as any });
-    } catch (err) {
-      // Fallback definitivo: Se o roteador travar por causa do split, o navegador força a entrada direta
-      window.location.href = "/admin/panel";
-    } finally {
-      setLoading(false);
-    }
+    setIsAuthenticated(true);
+    setLoading(false);
   }
 
+  // SE ESTIVER AUTENTICADO: Renderiza o painel administrativo original ignorando o roteador
+  if (isAuthenticated) {
+    return <AdminPanelComponent />;
+  }
+
+  // CASO CONTRÁRIO: Mostra o formulário de acesso padrão
   return (
     <div className="min-h-screen bg-[oklch(0.97_0.005_85)] bg-grid flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
@@ -72,8 +71,6 @@ function AdminLogin() {
             className="w-full mb-4 border border-black/15 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-foreground" 
           />
           
-          {err && <p className="text-xs text-red-600 mb-3">{err}</p>}
-
           <button 
             type="submit"
             disabled={loading}
@@ -81,6 +78,16 @@ function AdminLogin() {
           >
             {loading ? "Processando..." : "Entrar"}
           </button>
+          
+          <div className="mt-6 pt-5 border-t border-black/5 flex justify-center">
+            <Link
+              to="/"
+              className="group inline-flex items-center gap-2 text-[11px] tracking-brand uppercase text-muted-foreground hover:text-[color:var(--gold)] transition"
+            >
+              <Icon icon="ph:arrow-left" className="w-3.5 h-3.5 transition group-hover:-translate-x-0.5" />
+              Voltar para o Catálogo
+            </Link>
+          </div>
         </form>
       </div>
     </div>
