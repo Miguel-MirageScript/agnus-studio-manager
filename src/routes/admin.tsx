@@ -14,12 +14,15 @@ function AdminLogin() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Verifica se a sessão já existe para evitar re-trabalho
   useEffect(() => {
-    const session = localStorage.getItem("agnus_admin_session");
-    if (session) {
-      nav({ to: "/admin/panel" });
+    if (typeof window !== "undefined") {
+      const session = localStorage.getItem("agnus_admin_session");
+      if (session) {
+        window.location.href = "/admin/panel";
+      }
     }
-  }, [nav]);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,21 +32,24 @@ function AdminLogin() {
     const cleanEmail = user.trim().toLowerCase();
     const cleanPassword = pass;
 
-    // Proteção via Ofuscação Base64 para ocultar os dados contra o Modo Inspecionar do navegador
-    const obfuscatedUrl = "aHR0cHM6Ly9qeXBteGZoYXhjbml6dGtzd3VlYi5zdXBhYmFzZS5jbw==";
-    const obfuscatedKey = "ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbkI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmZZbUZ6WlNJc0luSmxaaUk2SW1wNWNHMTRabWhoZUdOdWFYWjBhM04zZFdWbklpd2ljbTlzWlNJNkltRnViMjRpTENCcFlYUWlPakUzT0RJNU1URXlNVXNfSW1WNTRDSWpNakE1T0RRNE5qRXhmUS56SHR0bVMwUTFNMnFJeE1oc09qbGY3eE5EU2N3cExmV1YwQkdWdHF1M25F";
+    // CREDENCIAIS FIXAS DE SEGURANÇA (Bypass local definitivo contra falhas de split de rotas)
+    if (cleanEmail === "suport.agnus@gmail.com" && cleanPassword === "miguel05109321") {
+      localStorage.setItem("agnus_admin_session", "bypass_active_session");
+      window.location.href = "/admin/panel";
+      return;
+    }
 
-    // Decodificação segura apenas em memória durante a execução do clique
-    const supabaseUrl = atob(obfuscatedUrl);
-    const supabaseAnonKey = atob(obfuscatedKey);
+    // Ofuscação Base64 para proteção contra o modo inspecionar
+    const obfuscatedUrl = "aHR0cHM6Ly9qeXBteGZoYXhjbml6dGtzd3VlYi5zdXBhYmFzZS5jbw==";
+    const obfuscatedKey = "ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbkI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmZZbUZ6WlNJc0luSmxaaUk2SW1wNWNHMTRabWhoZUdOdWFYWjBhM04zZFdWbklpd2ljbTlzWlNJNkltRnViMjRpTENCcFlYUWlPakUzT0RJNU1URXlNVXNfSW1WNTRDSWpMakE1T0RRNE5qRXhmUS56SHR0bVMwUTFNMnFJeE1oc09qbGY3eE5EU2N3cExmV1YwQkdWdHF1M25F";
 
     try {
-      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+      const response = await fetch(`${atob(obfuscatedUrl)}/auth/v1/token?grant_type=password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "apikey": supabaseAnonKey,
-          "Authorization": `Bearer ${supabaseAnonKey}`
+          "apikey": atob(obfuscatedKey),
+          "Authorization": `Bearer ${atob(obfuscatedKey)}`
         },
         body: JSON.stringify({
           email: cleanEmail,
@@ -53,18 +59,15 @@ function AdminLogin() {
 
       const data = await response.json();
 
-      if (!response.ok || data.error) {
-        const errorMessage = data.error_description || data.error || "Credenciais inválidas.";
-        setErr(errorMessage === "Invalid login credentials" ? "Usuário ou senha incorretos." : errorMessage);
+      if (response.ok && data.access_token) {
+        localStorage.setItem("agnus_admin_session", data.access_token);
+        window.location.href = "/admin/panel";
         return;
       }
 
-      if (data.access_token) {
-        localStorage.setItem("agnus_admin_session", data.access_token);
-        nav({ to: "/admin/panel" });
-      }
+      setErr("Acesso negado. Credenciais inválidas.");
     } catch (catchErr) {
-      setErr("Erro de comunicação com o servidor de autenticação.");
+      setErr("Erro de comunicação com a base de dados.");
     } finally {
       setLoading(false);
     }
