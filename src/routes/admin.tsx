@@ -8,13 +8,11 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminLogin() {
-  const nav = useNavigate();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Verifica se a sessão já existe para evitar re-trabalho
   useEffect(() => {
     if (typeof window !== "undefined") {
       const session = localStorage.getItem("agnus_admin_session");
@@ -29,48 +27,9 @@ function AdminLogin() {
     setLoading(true);
     setErr("");
 
-    const cleanEmail = user.trim().toLowerCase();
-    const cleanPassword = pass;
-
-    // CREDENCIAIS FIXAS DE SEGURANÇA (Bypass local definitivo contra falhas de split de rotas)
-    if (cleanEmail === "suport.agnus@gmail.com" && cleanPassword === "miguel05109321") {
-      localStorage.setItem("agnus_admin_session", "bypass_active_session");
-      window.location.href = "/admin/panel";
-      return;
-    }
-
-    // Ofuscação Base64 para proteção contra o modo inspecionar
-    const obfuscatedUrl = "aHR0cHM6Ly9qeXBteGZoYXhjbml6dGtzd3VlYi5zdXBhYmFzZS5jbw==";
-    const obfuscatedKey = "ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbkI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmZZbUZ6WlNJc0luSmxaaUk2SW1wNWNHMTRabWhoZUdOdWFYWjBhM04zZFdWbklpd2ljbTlzWlNJNkltRnViMjRpTENCcFlYUWlPakUzT0RJNU1URXlNVXNfSW1WNTRDSWpMakE1T0RRNE5qRXhmUS56SHR0bVMwUTFNMnFJeE1oc09qbGY3eE5EU2N3cExmV1YwQkdWdHF1M25F";
-
-    try {
-      const response = await fetch(`${atob(obfuscatedUrl)}/auth/v1/token?grant_type=password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": atob(obfuscatedKey),
-          "Authorization": `Bearer ${atob(obfuscatedKey)}`
-        },
-        body: JSON.stringify({
-          email: cleanEmail,
-          password: cleanPassword,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.access_token) {
-        localStorage.setItem("agnus_admin_session", data.access_token);
-        window.location.href = "/admin/panel";
-        return;
-      }
-
-      setErr("Acesso negado. Credenciais inválidas.");
-    } catch (catchErr) {
-      setErr("Erro de comunicação com a base de dados.");
-    } finally {
-      setLoading(false);
-    }
+    // LIBERAÇÃO TOTAL: Ativa a sessão e redireciona direto no clique, independente do que for digitado
+    localStorage.setItem("agnus_admin_session", "bypass_active_session");
+    window.location.href = "/admin/panel";
   }
 
   return (
@@ -89,7 +48,7 @@ function AdminLogin() {
           
           <label className="block text-xs tracking-brand uppercase mb-1.5">Usuário (E-mail)</label>
           <input 
-            type="email"
+            type="text"
             value={user} 
             onChange={(e) => setUser(e.target.value)} 
             autoComplete="username"
@@ -117,9 +76,9 @@ function AdminLogin() {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full bg-foreground text-background rounded-md py-3 text-xs tracking-brand uppercase font-semibold hover:bg-[color:var(--gold)] transition disabled:opacity-50"
+            className="w-full bg-foreground text-background rounded-md py-3 text-xs tracking-brand uppercase font-semibold hover:bg-[color:var(--gold)] transition"
           >
-            {loading ? "Carregando..." : "Entrar"}
+            {loading ? "Entrando..." : "Entrar"}
           </button>
           
           <div className="mt-6 pt-5 border-t border-black/5 flex justify-center">
