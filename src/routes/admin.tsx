@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Logo } from "@/components/brand/Logo";
 
-// Importa o componente do painel real diretamente da sua pasta administrativa
-import AdminPanelComponent from "./admin.panel"; 
+// Importação corrigida trazendo as propriedades internas da rota do painel
+import { Route as PanelRoute } from "./admin.panel";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLogin,
@@ -16,7 +16,6 @@ function AdminLogin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Se já tiver logado antes, pula a tela de login direto em memória
   useEffect(() => {
     const session = localStorage.getItem("agnus_admin_session");
     if (session === "bypass_active_session") {
@@ -28,18 +27,18 @@ function AdminLogin() {
     e.preventDefault();
     setLoading(true);
 
-    // Bypass imediato no clique
+    // Bypass imediato que grava no localStorage e altera o estado em memória
     localStorage.setItem("agnus_admin_session", "bypass_active_session");
     setIsAuthenticated(true);
     setLoading(false);
   }
 
-  // SE ESTIVER AUTENTICADO: Renderiza o painel administrativo original ignorando o roteador
-  if (isAuthenticated) {
+  // Se estiver autenticado, injeta o componente do painel obtido através da propriedade component da rota
+  if (isAuthenticated && PanelRoute.options.component) {
+    const AdminPanelComponent = PanelRoute.options.component;
     return <AdminPanelComponent />;
   }
 
-  // CASO CONTRÁRIO: Mostra o formulário de acesso padrão
   return (
     <div className="min-h-screen bg-[oklch(0.97_0.005_85)] bg-grid flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
