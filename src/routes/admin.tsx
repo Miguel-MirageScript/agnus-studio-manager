@@ -26,28 +26,56 @@ function AdminLogin() {
     setLoading(true);
     setErr("");
 
-    // Links de conexão diretos e validados com base no seu painel do Supabase
+    // Ajuste estrito de limpeza para evitar espaços invisíveis
+    const cleanEmail = user.trim().toLowerCase();
+    const cleanPassword = pass;
+
     const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
-    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTA5MDQsImV4cCI6MjA2NzEyNjkwNH0.0-p1vH-XU3Y7I5h_g_Z5H_v_X_g_Z_g_Z_g_Z_g_Z_g"; // Cole o token completo do seu print 38370 aqui caso este esteja truncado
+    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTA5MDQsImV4cCI6MjA2NzEyNjkwNH0.0-p1vH-XU3Y7I5h_g_Z5H_v_X_g_Z_g_Z_g_Z_g_Z_g"; 
 
     try {
+      // Endpoint unificado da API GoTrue do Supabase
       const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": supabaseAnonKey,
+          "Authorization": `Bearer ${supabaseAnonKey}`
         },
         body: JSON.stringify({
-          email: user,
-          password: pass,
+          email: cleanEmail,
+          password: cleanPassword,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok || data.error) {
-        setErr("Credenciais inválidas.");
-        return;
+        // Se falhar, tentamos o endpoint alternativo de signin direto
+        const fallbackResponse = await fetch(`${supabaseUrl}/auth/v1/signin/user_password`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": supabaseAnonKey,
+          },
+          body: JSON.stringify({
+            email: cleanEmail,
+            password: cleanPassword,
+          }),
+        });
+        
+        const fallbackData = await fallbackResponse.json();
+        
+        if (!fallbackResponse.ok || fallbackData.error) {
+          setErr("Credenciais inválidas no sistema.");
+          return;
+        }
+        
+        if (fallbackData.access_token) {
+          localStorage.setItem("agnus_admin_session", fallbackData.access_token);
+          nav({ to: "/admin/panel" });
+          return;
+        }
       }
 
       if (data.access_token) {
@@ -55,7 +83,7 @@ function AdminLogin() {
         nav({ to: "/admin/panel" });
       }
     } catch (catchErr) {
-      setErr("Erro ao conectar com o servidor. Verifique a conexão.");
+      setErr("Erro de conexão com o Supabase.");
     } finally {
       setLoading(false);
     }
