@@ -11,7 +11,7 @@ export interface AdminProduct extends Product {
 
 export interface Settings {
   whatsappNumber: string;
-  whatsappMessage: string; // supports {product}
+  whatsappMessage: string;
   instagramUrl: string;
   announcement: string;
   heroTitle: string;
@@ -114,6 +114,15 @@ export const store = {
   },
   deleteCategory(name: string) {
     state = { ...state, categories: state.categories.filter((c) => c !== name) };
+    emit();
+  },
+  // NOVAS FUNÇÕES PARA SUPORTAR O ARRASTAR E SOLTAR (DRAG AND DROP)
+  setCategories(categories: string[]) {
+    state = { ...state, categories };
+    emit();
+  },
+  setProducts(products: AdminProduct[]) {
+    state = { ...state, products };
     emit();
   },
   reset() {
