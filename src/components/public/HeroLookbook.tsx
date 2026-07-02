@@ -1,9 +1,11 @@
 import { Icon } from "@iconify/react";
 import { useState } from "react";
 import heroImg from "@/assets/hero-lookbook.jpg";
+import { useStore } from "@/lib/store";
 
 export function HeroLookbook() {
   const [playing, setPlaying] = useState(true);
+  const title = useStore((s) => s.settings.heroTitle);
   return (
     <section className="relative overflow-hidden bg-[oklch(0.96_0.005_85)]">
       <div className="relative aspect-[16/10] md:aspect-[21/9] w-full">
