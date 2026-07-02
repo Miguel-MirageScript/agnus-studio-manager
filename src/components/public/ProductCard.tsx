@@ -1,23 +1,26 @@
 import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { StatusBadge } from "@/components/brand/StatusBadge";
-import { WHATSAPP_LINK, type Product } from "@/lib/products";
+import { Hangtag } from "@/components/brand/Hangtag";
+import { whatsappHref, type AdminProduct } from "@/lib/store";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product }: { product: AdminProduct }) {
   const disabled = product.tags.includes("ESGOTADO");
+  const primaryTag = product.tags[0] ?? "AGNUS.93";
   return (
     <motion.article
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 240, damping: 22 }}
-      className="group flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_2px_20px_-8px_rgba(0,0,0,0.08)]"
+      className="group relative flex flex-col overflow-visible rounded-xl border border-black/5 bg-white shadow-[0_2px_20px_-8px_rgba(0,0,0,0.08)]"
     >
-      <div className="relative aspect-[4/5] bg-[oklch(0.97_0.005_85)] overflow-hidden">
+      <div className="relative aspect-[4/5] bg-[oklch(0.97_0.005_85)] overflow-hidden rounded-t-xl">
         <img
           src={product.image}
           alt={product.name}
           loading="lazy"
           className="h-full w-full object-contain p-6 transition-transform duration-700 group-hover:scale-105"
         />
+        <Hangtag style={product.hangtag} label={primaryTag} />
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-1.5">
           {product.tags.map((t) => (
             <StatusBadge key={t} tag={t} />
@@ -30,7 +33,7 @@ export function ProductCard({ product }: { product: Product }) {
           <p className="mt-1 text-sm text-muted-foreground font-mono">${product.price.toFixed(2).replace(".", ",")}</p>
         </div>
         <a
-          href={disabled ? undefined : WHATSAPP_LINK(product.name)}
+          href={disabled ? undefined : whatsappHref(product.name)}
           target="_blank"
           rel="noreferrer"
           aria-disabled={disabled}
