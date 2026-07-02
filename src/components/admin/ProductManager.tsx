@@ -1,12 +1,15 @@
 import { Icon } from "@iconify/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { store, useStore, type AdminProduct, type HangtagStyle } from "@/lib/store";
 import { Hangtag } from "@/components/brand/Hangtag";
 import { cn } from "@/lib/utils";
 import type { StatusTag } from "@/lib/products";
+import { createClient } from '@supabase/supabase-js';
 
+// Supabase configuration - using provided values
 const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const STATUS_OPTIONS: StatusTag[] = [
   "PRONTA ENTREGA",
@@ -36,45 +39,46 @@ const emptyDraft = (category: string): Draft => ({
   hangtag: "classic",
 });
 
-// FUNÇÃO AUXILIAR: Envia arquivo para o Supabase Storage
+// Corrected function: Upload image to Supabase and return public URL
 async function uploadToSupabase(file: File): Promise<string> {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-  const uploadUrl = `${supabaseUrl}/storage/v1/object/products/${fileName}`;
 
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: {
-      "apikey": supabaseKey,
-      "Authorization": `Bearer ${supabaseKey}`,
-      "Content-Type": file.type
-    },
-    body: file
-  });
+  // Uses the official library for a secure upload
+  const { data, error } = await supabase.storage
+    .from('products')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
 
-  if (!response.ok) {
-    throw new Error("Erro ao subir arquivo para o Storage");
+  if (error) {
+    console.error("Supabase storage error details:", error);
+    throw new Error(error.message);
   }
 
-  // Retorna a URL pública definitiva da imagem
-  return `${supabaseUrl}/storage/v1/object/public/products/${fileName}`;
+  // Generates the definitive public URL for the image
+  const { data: publicUrlData } = supabase.storage
+    .from('products')
+    .getPublicUrl(fileName);
+
+  return publicUrlData.publicUrl;
 }
 
-// FUNÇÃO AUXILIAR: Deleta arquivo físico do Supabase Storage para liberar espaço
+// Corrected function: Delete file from Supabase storage
 async function deleteFromSupabase(imageUrl: string) {
   const prefix = `${supabaseUrl}/storage/v1/object/public/products/`;
   if (!imageUrl || !imageUrl.startsWith(prefix)) return;
 
   const fileName = imageUrl.replace(prefix, "");
-  const deleteUrl = `${supabaseUrl}/storage/v1/object/products/${fileName}`;
 
-  await fetch(deleteUrl, {
-    method: "DELETE",
-    headers: {
-      "apikey": supabaseKey,
-      "Authorization": `Bearer ${supabaseKey}`
-    }
-  });
+  const { error } = await supabase.storage
+    .from('products')
+    .remove([fileName]);
+
+  if (error) {
+    console.error("Error deleting file:", error);
+  }
 }
 
 export function ProductManager() {
@@ -91,16 +95,16 @@ export function ProductManager() {
     try {
       let finalImageUrl = editing.image;
 
-      // Se o usuário selecionou um arquivo novo do dispositivo
+      // If a new image was selected
       if (fileToUpload) {
-        // Otimização de espaço: Se for uma Edição e já tiver imagem antiga, remove ela primeiro do Supabase
+        // Space optimization: if editing and an old image exists, remove it from Supabase
         if (editing.id) {
           const oldProduct = products.find(p => p.id === editing.id);
           if (oldProduct && oldProduct.image) {
             await deleteFromSupabase(oldProduct.image);
           }
         }
-        // Sobe a nova imagem
+        // Upload the new image and get the URL
         finalImageUrl = await uploadToSupabase(fileToUpload);
       }
 
@@ -112,23 +116,23 @@ export function ProductManager() {
         store.addProduct(updatedDraft);
       }
       setEditing(null);
-    } catch (error) {
-      alert("Erro ao salvar o produto com a imagem no Supabase. Verifique as políticas do seu Storage.");
+    } catch (error: any) {
+      alert("Error saving product to Supabase: " + (error.message || "Upload failed"));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteProduct = async (id: string, imageUrl: string) => {
-    if (window.confirm("Tem certeza que deseja excluir este produto? A imagem também será deletada da nuvem.")) {
+    if (window.confirm("Are you sure you want to delete this product? The image will also be removed from the server.")) {
       setLoading(true);
       try {
-        // 1. Remove o arquivo físico do Supabase Storage para liberar espaço gratuito
+        // 1. Remove the physical file from Supabase Storage
         await deleteFromSupabase(imageUrl);
-        // 2. Remove o registro do produto
+        // 2. Remove the product record
         store.deleteProduct(id);
-      } catch (error) {
-        alert("Erro ao remover a imagem do servidor.");
+      } catch (error: any) {
+        alert("Error removing image from server: " + (error.message || "Deletion failed"));
       } finally {
         setLoading(false);
       }
@@ -167,7 +171,6 @@ export function ProductManager() {
               <button
                 onClick={() => store.deleteCategory(c)}
                 className="rounded-full p-0.5 text-muted-foreground hover:text-red-600 hover:bg-red-50"
-                aria-label={`Remover ${c}`}
               >
                 <Icon icon="ph:x-bold" className="w-3 h-3" />
               </button>
@@ -201,7 +204,7 @@ export function ProductManager() {
           <div key={p.id} className="rounded-2xl border border-black/10 bg-white p-4">
             <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-[oklch(0.97_0.005_85)] flex items-center justify-center">
               {p.image ? (
-                <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
+                <img src={p.image} alt={p.name} className="h-full w-full object-cover p-6" />
               ) : (
                 <Icon icon="ph:image-square-thin" className="w-12 h-12 text-black/10" />
               )}
@@ -222,14 +225,12 @@ export function ProductManager() {
                   onClick={() => setEditing({ ...p })}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/15 py-2 text-[11px] font-semibold uppercase tracking-widest hover:border-foreground disabled:opacity-50"
                 >
-                  <Icon icon="ph:pencil-simple" className="w-3.5 h-3.5" />
-                  Editar
+                  <Icon icon="ph:pencil-simple" className="w-3.5 h-3.5" /> Editar
                 </button>
                 <button
                   disabled={loading}
                   onClick={() => handleDeleteProduct(p.id, p.image)}
                   className="inline-flex items-center justify-center rounded-lg border border-black/15 px-3 py-2 text-red-600 hover:border-red-600 hover:bg-red-50 disabled:opacity-50"
-                  aria-label="Excluir"
                 >
                   <Icon icon="ph:trash" className="w-4 h-4" />
                 </button>
@@ -306,7 +307,7 @@ function ProductEditor({
           {/* UPLOAD BOX COM PREVIEW REAL */}
           <div>
             <Label>Imagem do Produto</Label>
-            <div className="relative w-full h-52 rounded-xl border-2 border-dashed border-black/15 bg-neutral-50 flex flex-col items-center justify-center cursor-pointer hover:border-foreground overflow-hidden group transition">
+            <div className="relative w-full h-52 rounded-xl border-2 border-dashed border-black/15 bg-neutral-50 flex flex-col items-center justify-center cursor-pointer hover:border-foreground overflow-hidden transition group">
               {preview ? (
                 <img src={preview} alt="Preview" className="h-full w-full object-contain p-4 bg-white" />
               ) : (
@@ -474,4 +475,4 @@ function Field({
       />
     </div>
   );
-                                                                               }
+}
