@@ -1,23 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, Component, ReactNode } from "react";
+import { useEffect, useState, Component, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
 import { AdminSidebar, type AdminSection } from "@/components/admin/AdminSidebar";
 import { VisualEditor } from "@/components/admin/VisualEditor";
 import { ProductManager } from "@/components/admin/ProductManager";
-import { PlaceholderPanel } from "@/components/admin/PlaceholderPanel";
+import { DashboardPanel } from "@/components/admin/DashboardPanel";
+import { SettingsPanel } from "@/components/admin/SettingsPanel";
 
 export const Route = createFileRoute("/admin/panel")({
   component: AdminPanel,
 });
 
-// ESCUDO DE PROTEÇÃO: Impede que um erro no banco de dados quebre a tela branca inteira
-class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: string}> {
-  constructor(props: {children: ReactNode}) {
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
+  constructor(props: { children: ReactNode }) {
     super(props);
     this.state = { hasError: false, error: "" };
   }
   static getDerivedStateFromError(error: any) {
-    return { hasError: true, error: error.message || "Erro desconhecido" };
+    return { hasError: true, error: error?.message || "Erro desconhecido" };
   }
   render() {
     if (this.state.hasError) {
@@ -27,11 +27,8 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
             <Icon icon="ph:warning-duotone" className="w-5 h-5" />
             Falha no Módulo Interno
           </div>
-          <p className="text-sm text-red-800 mb-4">
-            O painel carregou com sucesso, mas esta aba tentou acessar o banco de dados e falhou (provavelmente por falta das chaves do Supabase na Cloudflare).
-          </p>
           <p className="text-xs font-mono text-red-600 bg-red-100 p-3 rounded-md overflow-x-auto">
-            Detalhe técnico: {this.state.error}
+            {this.state.error}
           </p>
         </div>
       );
@@ -42,12 +39,11 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
 
 function AdminPanel() {
   const nav = useNavigate();
-  // Mudamos o padrão para "visao" para garantir que a tela abra sem crashar
   const [section, setSection] = useState<AdminSection>("visao");
+  const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Verificação de segurança local e blindada
     const session = localStorage.getItem("agnus_admin_session");
     if (!session) {
       nav({ to: "/admin" });
@@ -61,46 +57,50 @@ function AdminPanel() {
     nav({ to: "/admin" });
   }
 
+  function handleSectionChange(s: AdminSection) {
+    setSection(s);
+    if (s === "editor") setEditorFullscreen(true);
+  }
+
   if (!ready) return null;
 
+  if (editorFullscreen) {
+    return (
+      <ErrorBoundary>
+        <VisualEditor onExit={() => setEditorFullscreen(false)} />
+      </ErrorBoundary>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[oklch(0.97_0.005_85)] bg-grid">
+    <div className="min-h-screen bg-[#F7F4EF] bg-grid">
       <div className="mx-auto flex max-w-[1400px]">
-        <AdminSidebar
-          active={section}
-          onChange={setSection}
-          onLogout={handleSignOut}
-        />
+        <AdminSidebar active={section} onChange={handleSectionChange} onLogout={handleSignOut} />
         <main className="flex-1 min-w-0 p-5 md:p-8">
           <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
             <Icon icon="ph:lock-key-duotone" className="w-4 h-4 text-[color:var(--gold)]" />
             <span className="tracking-brand uppercase">Painel Administrativo Oculto</span>
           </div>
-          
-          {/* O escudo envolve as abas. Se uma quebrar, o menu continua intacto. */}
+
           <ErrorBoundary key={section}>
-            {section === "editor" && <VisualEditor />}
+            {section === "visao" && <DashboardPanel onNavigate={handleSectionChange} />}
             {section === "catalogo" && <ProductManager />}
-            {section === "visao" && (
-              <PlaceholderPanel
-                title="Visão Geral"
-                icon="ph:chart-line-up-duotone"
-                description="Dashboards de vendas, alcance e performance de coleções da AGNUS.1993."
-              />
-            )}
-            {section === "midia" && (
-              <PlaceholderPanel
-                title="Biblioteca de Mídia"
-                icon="ph:image-square-duotone"
-                description="Gerencie imagens, GIFs e vídeos usados no lookbook e nos drops da marca."
-              />
-            )}
-            {section === "config" && (
-              <PlaceholderPanel
-                title="Configurações"
-                icon="ph:gear-six-duotone"
-                description="Preferências gerais do painel, integrações e segurança da conta administrativa."
-              />
+            {section === "config" && <SettingsPanel />}
+            {section === "editor" && (
+              <button
+                onClick={() => setEditorFullscreen(true)}
+                className="rounded-2xl border border-dashed border-black/20 bg-white p-8 w-full text-left hover:border-foreground"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background">
+                    <Icon icon="ph:magic-wand-duotone" className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold">Abrir Editor Visual em Tela Cheia</p>
+                    <p className="text-xs text-muted-foreground">Toque em qualquer seção do site para editar.</p>
+                  </div>
+                </div>
+              </button>
             )}
           </ErrorBoundary>
         </main>
