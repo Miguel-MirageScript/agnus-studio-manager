@@ -6,7 +6,7 @@ import { ProductCard } from "@/components/public/ProductCard";
 import { QuickFilters, type FilterKey } from "@/components/public/QuickFilters";
 import { LookbookLoop } from "@/components/public/LookbookLoop";
 import { Footer } from "@/components/public/Footer";
-import { PRODUCTS } from "@/lib/products";
+import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -14,12 +14,19 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const [filter, setFilter] = useState<FilterKey>("todos");
+  const products = useStore((s) => s.products);
+  const announcement = useStore((s) => s.settings.announcement);
   const filtered = useMemo(
-    () => (filter === "todos" ? PRODUCTS : PRODUCTS.filter((p) => p.filters.includes(filter as any))),
-    [filter]
+    () => (filter === "todos" ? products : products.filter((p) => p.filters.includes(filter as any))),
+    [filter, products],
   );
   return (
     <div className="min-h-screen bg-background bg-grid">
+      {announcement && (
+        <div className="bg-foreground text-background text-center text-[10px] tracking-[0.25em] uppercase py-2 px-4 font-semibold">
+          {announcement}
+        </div>
+      )}
       <Header />
       <HeroLookbook />
       <section className="mx-auto max-w-7xl px-5 py-10 md:px-8">
