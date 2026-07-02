@@ -2,13 +2,12 @@ import { Icon } from "@iconify/react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/brand/Logo";
 
-export type AdminSection = "visao" | "catalogo" | "editor" | "midia" | "config";
+export type AdminSection = "visao" | "catalogo" | "editor" | "config";
 
 const ITEMS: { key: AdminSection; label: string; icon: string }[] = [
   { key: "visao", label: "Visão Geral", icon: "ph:chart-line-up-duotone" },
   { key: "catalogo", label: "Catálogo de Produtos", icon: "ph:t-shirt-duotone" },
   { key: "editor", label: "Editor Visual do Site", icon: "ph:squares-four-duotone" },
-  { key: "midia", label: "Biblioteca de Mídia", icon: "ph:image-square-duotone" },
   { key: "config", label: "Configurações", icon: "ph:gear-six-duotone" },
 ];
 
