@@ -5,6 +5,9 @@ import { Hangtag } from "@/components/brand/Hangtag";
 import { cn } from "@/lib/utils";
 import type { StatusTag } from "@/lib/products";
 
+const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
+
 const STATUS_OPTIONS: StatusTag[] = [
   "PRONTA ENTREGA",
   "SOB ENCOMENDA",
@@ -25,7 +28,7 @@ type Draft = Omit<AdminProduct, "id"> & { id?: string };
 const emptyDraft = (category: string): Draft => ({
   name: "",
   price: 0,
-  image: "", // Inicia vazio para obrigar o upload
+  image: "",
   tags: ["PRONTA ENTREGA"],
   filters: ["novidades"],
   category,
@@ -33,20 +36,103 @@ const emptyDraft = (category: string): Draft => ({
   hangtag: "classic",
 });
 
+// FUNÇÃO AUXILIAR: Envia arquivo para o Supabase Storage
+async function uploadToSupabase(file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+  const uploadUrl = `${supabaseUrl}/storage/v1/object/products/${fileName}`;
+
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "apikey": supabaseKey,
+      "Authorization": `Bearer ${supabaseKey}`,
+      "Content-Type": file.type
+    },
+    body: file
+  });
+
+  if (!response.ok) {
+    throw new Error("Erro ao subir arquivo para o Storage");
+  }
+
+  // Retorna a URL pública definitiva da imagem
+  return `${supabaseUrl}/storage/v1/object/public/products/${fileName}`;
+}
+
+// FUNÇÃO AUXILIAR: Deleta arquivo físico do Supabase Storage para liberar espaço
+async function deleteFromSupabase(imageUrl: string) {
+  const prefix = `${supabaseUrl}/storage/v1/object/public/products/`;
+  if (!imageUrl || !imageUrl.startsWith(prefix)) return;
+
+  const fileName = imageUrl.replace(prefix, "");
+  const deleteUrl = `${supabaseUrl}/storage/v1/object/products/${fileName}`;
+
+  await fetch(deleteUrl, {
+    method: "DELETE",
+    headers: {
+      "apikey": supabaseKey,
+      "Authorization": `Bearer ${supabaseKey}`
+    }
+  });
+}
+
 export function ProductManager() {
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [newCat, setNewCat] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const save = () => {
+  const save = async (fileToUpload: File | null) => {
     if (!editing || !editing.name.trim()) return;
-    if (editing.id) {
-      store.updateProduct(editing.id, editing);
-    } else {
-      store.addProduct(editing);
+    setLoading(true);
+
+    try {
+      let finalImageUrl = editing.image;
+
+      // Se o usuário selecionou um arquivo novo do dispositivo
+      if (fileToUpload) {
+        // Otimização de espaço: Se for uma Edição e já tiver imagem antiga, remove ela primeiro do Supabase
+        if (editing.id) {
+          const oldProduct = products.find(p => p.id === editing.id);
+          if (oldProduct && oldProduct.image) {
+            await deleteFromSupabase(oldProduct.image);
+          }
+        }
+        // Sobe a nova imagem
+        finalImageUrl = await uploadToSupabase(fileToUpload);
+      }
+
+      const updatedDraft = { ...editing, image: finalImageUrl };
+
+      if (editing.id) {
+        store.updateProduct(editing.id, updatedDraft);
+      } else {
+        store.addProduct(updatedDraft);
+      }
+      setEditing(null);
+    } catch (error) {
+      alert("Erro ao salvar o produto com a imagem no Supabase. Verifique as políticas do seu Storage.");
+    } finally {
+      setLoading(false);
     }
-    setEditing(null);
+  };
+
+  const handleDeleteProduct = async (id: string, imageUrl: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este produto? A imagem também será deletada da nuvem.")) {
+      setLoading(true);
+      try {
+        // 1. Remove o arquivo físico do Supabase Storage para liberar espaço gratuito
+        await deleteFromSupabase(imageUrl);
+        // 2. Remove o registro do produto
+        store.deleteProduct(id);
+      } catch (error) {
+        alert("Erro ao remover a imagem do servidor.");
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
@@ -55,12 +141,13 @@ export function ProductManager() {
         <div>
           <h1 className="font-display text-2xl md:text-3xl">Catálogo de Produtos</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gerencie seu estoque e estilos de etiqueta.
+            CRUD completo conectado ao Supabase Storage.
           </p>
         </div>
         <button
+          disabled={loading}
           onClick={() => setEditing(emptyDraft(categories[0] ?? "Camisetas"))}
-          className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] hover:bg-[color:var(--gold)] hover:text-foreground transition"
+          className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] hover:bg-[color:var(--gold)] hover:text-foreground transition disabled:opacity-50"
         >
           <Icon icon="ph:plus-bold" className="w-4 h-4" />
           Novo Produto
@@ -80,6 +167,7 @@ export function ProductManager() {
               <button
                 onClick={() => store.deleteCategory(c)}
                 className="rounded-full p-0.5 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                aria-label={`Remover ${c}`}
               >
                 <Icon icon="ph:x-bold" className="w-3 h-3" />
               </button>
@@ -95,7 +183,10 @@ export function ProductManager() {
           />
           <button
             onClick={() => {
-              if (newCat) { store.addCategory(newCat); setNewCat(""); }
+              if (newCat.trim()) {
+                store.addCategory(newCat.trim());
+                setNewCat("");
+              }
             }}
             className="rounded-lg bg-foreground text-background px-4 text-xs font-semibold uppercase tracking-widest"
           >
@@ -108,11 +199,11 @@ export function ProductManager() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {products.map((p) => (
           <div key={p.id} className="rounded-2xl border border-black/10 bg-white p-4">
-            <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-[oklch(0.97_0.005_85)]">
+            <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-[oklch(0.97_0.005_85)] flex items-center justify-center">
               {p.image ? (
                 <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-black/20"><Icon icon="ph:image" className="w-10 h-10"/></div>
+                <Icon icon="ph:image-square-thin" className="w-12 h-12 text-black/10" />
               )}
               <Hangtag style={p.hangtag} label={p.tags[0] ?? "AGNUS.93"} />
             </div>
@@ -127,14 +218,18 @@ export function ProductManager() {
               </div>
               <div className="mt-3 flex gap-2">
                 <button
+                  disabled={loading}
                   onClick={() => setEditing({ ...p })}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/15 py-2 text-[11px] font-semibold uppercase tracking-widest hover:border-foreground"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/15 py-2 text-[11px] font-semibold uppercase tracking-widest hover:border-foreground disabled:opacity-50"
                 >
-                  <Icon icon="ph:pencil-simple" className="w-3.5 h-3.5" /> Editar
+                  <Icon icon="ph:pencil-simple" className="w-3.5 h-3.5" />
+                  Editar
                 </button>
                 <button
-                  onClick={() => store.deleteProduct(p.id)}
-                  className="inline-flex items-center justify-center rounded-lg border border-black/15 px-3 py-2 text-red-600 hover:border-red-600 hover:bg-red-50"
+                  disabled={loading}
+                  onClick={() => handleDeleteProduct(p.id, p.image)}
+                  className="inline-flex items-center justify-center rounded-lg border border-black/15 px-3 py-2 text-red-600 hover:border-red-600 hover:bg-red-50 disabled:opacity-50"
+                  aria-label="Excluir"
                 >
                   <Icon icon="ph:trash" className="w-4 h-4" />
                 </button>
@@ -148,6 +243,7 @@ export function ProductManager() {
         <ProductEditor
           draft={editing}
           categories={categories}
+          loading={loading}
           onChange={setEditing}
           onCancel={() => setEditing(null)}
           onSave={save}
@@ -160,16 +256,21 @@ export function ProductManager() {
 function ProductEditor({
   draft,
   categories,
+  loading,
   onChange,
   onCancel,
   onSave,
 }: {
   draft: Draft;
   categories: string[];
+  loading: boolean;
   onChange: (d: Draft) => void;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: (file: File | null) => void;
 }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string>(draft.image);
+
   const toggleTag = (t: StatusTag) => {
     onChange({
       ...draft,
@@ -177,18 +278,18 @@ function ProductEditor({
     });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      onChange({ ...draft, image: url });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile));
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onCancel}>
       <div
-        className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
+        className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-black/10 px-6 py-4 sticky top-0 bg-white z-10">
@@ -202,31 +303,43 @@ function ProductEditor({
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Campo de Upload de Imagem */}
+          {/* UPLOAD BOX COM PREVIEW REAL */}
           <div>
             <Label>Imagem do Produto</Label>
-            <div className="relative w-full h-48 rounded-xl border-2 border-dashed border-black/15 bg-neutral-50 flex items-center justify-center cursor-pointer hover:border-foreground overflow-hidden">
-                {draft.image ? (
-                    <img src={draft.image} alt="Preview" className="h-full object-contain p-2" />
-                ) : (
-                    <div className="flex flex-col items-center text-muted-foreground text-xs"><Icon icon="ph:image-square" className="w-8 h-8 mb-2"/> Selecionar Imagem</div>
-                )}
-                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleImageUpload} />
+            <div className="relative w-full h-52 rounded-xl border-2 border-dashed border-black/15 bg-neutral-50 flex flex-col items-center justify-center cursor-pointer hover:border-foreground overflow-hidden group transition">
+              {preview ? (
+                <img src={preview} alt="Preview" className="h-full w-full object-contain p-4 bg-white" />
+              ) : (
+                <div className="flex flex-col items-center text-muted-foreground text-xs gap-1">
+                  <Icon icon="ph:cloud-arrow-up-duotone" className="w-8 h-8 text-[color:var(--gold)]" />
+                  <span className="font-semibold text-black/70">Selecionar Mockup ou Foto</span>
+                  <span className="text-[10px]">Toque para abrir a galeria</span>
+                </div>
+              )}
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="absolute inset-0 opacity-0 cursor-pointer" 
+                onChange={handleFileChange} 
+                disabled={loading}
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Nome do Produto" value={draft.name} onChange={(v) => onChange({ ...draft, name: v })} />
+            <Field label="Nome do Produto" value={draft.name} disabled={loading} onChange={(v) => onChange({ ...draft, name: v })} />
             <Field
               label="Preço (R$)"
               type="number"
               value={String(draft.price)}
+              disabled={loading}
               onChange={(v) => onChange({ ...draft, price: parseFloat(v) || 0 })}
             />
             <div>
               <Label>Categoria</Label>
               <select
                 value={draft.category}
+                disabled={loading}
                 onChange={(e) => onChange({ ...draft, category: e.target.value })}
                 className="w-full rounded-lg border border-black/15 px-3 py-2.5 text-sm bg-white outline-none focus:border-foreground"
               >
@@ -239,6 +352,7 @@ function ProductEditor({
               label="Estoque"
               type="number"
               value={String(draft.stock)}
+              disabled={loading}
               onChange={(v) => onChange({ ...draft, stock: parseInt(v) || 0 })}
             />
           </div>
@@ -251,10 +365,14 @@ function ProductEditor({
                 return (
                   <button
                     key={t}
+                    type="button"
+                    disabled={loading}
                     onClick={() => toggleTag(t)}
                     className={cn(
                       "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition",
-                      on ? "border-foreground bg-foreground text-background" : "border-black/15 text-muted-foreground hover:border-foreground",
+                      on
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-black/15 text-muted-foreground hover:border-foreground",
                     )}
                   >
                     {t}
@@ -272,6 +390,8 @@ function ProductEditor({
                 return (
                   <button
                     key={h.key}
+                    type="button"
+                    disabled={loading}
                     onClick={() => onChange({ ...draft, hangtag: h.key })}
                     className={cn(
                       "relative rounded-xl border-2 p-3 text-left transition bg-[#F7F4EF]",
@@ -279,10 +399,21 @@ function ProductEditor({
                     )}
                   >
                     <div className="relative h-24 rounded-lg overflow-hidden bg-white flex items-center justify-center">
-                        {draft.image ? <img src={draft.image} className="h-full object-contain p-2"/> : <div className="text-[8px] text-black/20">Sem imagem</div>}
-                        <Hangtag style={h.key} label={draft.tags[0] ?? "AGNUS.93"} />
+                      {preview ? (
+                        <img src={preview} alt="" className="h-full object-contain p-2" />
+                      ) : (
+                        <div className="text-[9px] text-black/20">Sem preview</div>
+                      )}
+                      <Hangtag style={h.key} label={draft.tags[0] ?? "AGNUS.93"} />
                     </div>
-                    <p className="mt-2 text-[10px] font-semibold">{h.label}</p>
+                    <p className="mt-2 text-xs font-semibold">{h.label}</p>
+                    <p className="text-[9px] text-muted-foreground">{h.hint}</p>
+                    {selected && (
+                      <Icon
+                        icon="ph:check-circle-fill"
+                        className="absolute top-2 right-2 w-5 h-5 text-[color:var(--gold)]"
+                      />
+                    )}
                   </button>
                 );
               })}
@@ -291,8 +422,23 @@ function ProductEditor({
         </div>
 
         <div className="border-t border-black/10 px-6 py-4 flex justify-end gap-2 sticky bottom-0 bg-white">
-          <button onClick={onCancel} className="px-4 py-2.5 text-xs uppercase tracking-widest font-semibold text-muted-foreground hover:text-foreground">Cancelar</button>
-          <button onClick={onSave} className="rounded-full bg-foreground text-background px-5 py-2.5 text-xs uppercase tracking-widest font-semibold hover:bg-[color:var(--gold)] hover:text-foreground transition">Salvar</button>
+          <button 
+            type="button"
+            onClick={onCancel} 
+            disabled={loading}
+            className="px-4 py-2.5 text-xs uppercase tracking-widest font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => onSave(file)}
+            className="rounded-full bg-foreground text-background px-6 py-2.5 text-xs uppercase tracking-widest font-semibold hover:bg-[color:var(--gold)] hover:text-foreground transition flex items-center gap-2 disabled:opacity-70"
+          >
+            {loading && <Icon icon="line-md:loading-twotone-loop" className="w-4 h-4" />}
+            {loading ? "Processando..." : "Salvar"}
+          </button>
         </div>
       </div>
     </div>
@@ -303,11 +449,29 @@ function Label({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-foreground/70 mb-2">{children}</p>;
 }
 
-function Field({ label, value, onChange, type = "text" }: { label: string, value: string, onChange: (v: string) => void, type?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  disabled?: boolean;
+}) {
   return (
     <div>
       <Label>{label}</Label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border border-black/15 px-3 py-2.5 text-sm outline-none focus:border-foreground" />
+      <input
+        type={type}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-black/15 px-3 py-2.5 text-sm outline-none focus:border-foreground disabled:opacity-50"
+      />
     </div>
   );
-}
+                                                                               }
