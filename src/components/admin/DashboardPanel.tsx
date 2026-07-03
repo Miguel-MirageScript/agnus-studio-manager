@@ -1,8 +1,9 @@
 import { Icon } from "@iconify/react";
 import { useMemo } from "react";
 import {
-  Area,
-  AreaChart,
+  ComposedChart,
+  Bar,
+  Line,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -14,6 +15,43 @@ import type { AdminSection } from "@/components/admin/AdminSidebar";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// Tooltip Personalizado e Premium para mostrar a Conversão
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const acessos = payload[0]?.value || 0;
+    const whatsapp = payload[1]?.value || 0;
+    const taxa = acessos > 0 ? ((whatsapp / acessos) * 100).toFixed(1) : "0.0";
+
+    return (
+      <div className="bg-white border border-black/10 p-4 rounded-2xl shadow-xl min-w-[160px]">
+        <p className="font-bold text-[10px] uppercase tracking-widest text-black/40 mb-3">{label}</p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-6">
+            <span className="text-xs text-black/60 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-sm bg-neutral-200"></div>
+              Acessos
+            </span>
+            <span className="font-mono font-bold text-black">{acessos}</span>
+          </div>
+          <div className="flex items-center justify-between gap-6">
+            <span className="text-xs text-[color:var(--gold)] font-bold flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[color:var(--gold)]"></div>
+              WhatsApp
+            </span>
+            <span className="font-mono font-bold text-[color:var(--gold)]">{whatsapp}</span>
+          </div>
+          <div className="h-[1px] w-full bg-black/5 my-2" />
+          <div className="flex items-center justify-between gap-6">
+            <span className="text-[10px] text-black/40 uppercase tracking-widest">Conversão</span>
+            <span className="font-mono text-xs font-bold text-black">{taxa}%</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);
@@ -23,12 +61,10 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
     const now = new Date();
     return Array.from({ length: 12 }).map((_, i) => {
       const month = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-      // Curva simulada realista para acessos a um catálogo
       const baseAcessos = 1200 + Math.sin((i / 12) * Math.PI * 2) * 500;
       const noise = ((i * 37) % 200) - 100;
       const acessos = Math.max(300, Math.round(baseAcessos + noise));
       
-      // Cliques no WhatsApp (Leads) costumam ser uma fração dos acessos totais (ex: 8% a 15%)
       const conversionRate = 0.08 + (((i * 13) % 7) / 100);
       const whatsapp = Math.round(acessos * conversionRate);
       
@@ -66,7 +102,7 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
       <header>
         <p className="text-[10px] uppercase tracking-[0.3em] text-[color:var(--gold)] font-semibold">
           Visão Geral
@@ -81,7 +117,7 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
         {stats.map((s) => (
           <div
             key={s.label}
-            className="relative overflow-hidden rounded-2xl border border-black/10 bg-white p-5"
+            className="relative overflow-hidden rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
           >
             <div className="flex items-start justify-between">
               <div>
@@ -106,117 +142,138 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-2xl border border-black/10 bg-white p-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="lg:col-span-2 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="font-display text-xl">Engajamento & Leads</h2>
-              <p className="text-xs text-muted-foreground">Acessos ao catálogo vs. Contatos via WhatsApp</p>
+              <p className="text-xs text-muted-foreground mt-1">Acessos ao catálogo vs. Contatos via WhatsApp</p>
             </div>
-            <div className="hidden sm:flex items-center gap-4 text-[10px] uppercase tracking-[0.2em]">
-              <span className="flex items-center gap-2 text-foreground/70">
-                <span className="h-2 w-2 rounded-full bg-foreground" /> Acessos
+            <div className="hidden sm:flex items-center gap-5 text-[10px] uppercase tracking-[0.2em] font-bold">
+              <span className="flex items-center gap-2 text-black/40">
+                <span className="h-2.5 w-2.5 rounded-sm bg-neutral-200" /> Acessos
               </span>
-              <span className="flex items-center gap-2 text-foreground/70">
-                <span className="h-2 w-2 rounded-full bg-[color:var(--gold)]" /> WhatsApp
+              <span className="flex items-center gap-2 text-[color:var(--gold)]">
+                <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--gold)]" /> WhatsApp
               </span>
             </div>
           </div>
-          <div className="h-72">
+          
+          <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gAcessos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0a0a0a" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#0a0a0a" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gWhatsapp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#B79766" stopOpacity={0.55} />
-                    <stop offset="100%" stopColor="#B79766" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b6b6b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#6b6b6b" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "white",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
+              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
+                
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 10, fill: "#a3a3a3", fontWeight: 600 }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  dy={10} 
                 />
-                <Area
-                  type="monotone"
-                  dataKey="acessos"
-                  stroke="#0a0a0a"
-                  strokeWidth={2}
-                  fill="url(#gAcessos)"
+                
+                {/* Eixo Esquerdo (Acessos) */}
+                <YAxis 
+                  yAxisId="left" 
+                  tick={{ fontSize: 10, fill: "#a3a3a3", fontWeight: 600 }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  dx={-10}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="whatsapp"
-                  stroke="#B79766"
-                  strokeWidth={2}
-                  fill="url(#gWhatsapp)"
+                
+                {/* Eixo Direito Invisível (WhatsApp) - Permite que a linha escale livremente */}
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right" 
+                  hide={true} 
                 />
-              </AreaChart>
+                
+                <Tooltip 
+                  content={<CustomTooltip />} 
+                  cursor={{ fill: 'rgba(0,0,0,0.03)' }} 
+                />
+                
+                {/* Barras Minimalistas ao fundo */}
+                <Bar 
+                  yAxisId="left" 
+                  dataKey="acessos" 
+                  fill="#f2f2f2" 
+                  radius={[6, 6, 0, 0]} 
+                  maxBarSize={45} 
+                />
+                
+                {/* Linha Dourada em destaque na frente */}
+                <Line 
+                  yAxisId="right" 
+                  type="monotone" 
+                  dataKey="whatsapp" 
+                  stroke="var(--gold, #B79766)" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: "#fff", stroke: "var(--gold, #B79766)", strokeWidth: 2 }} 
+                  activeDot={{ r: 6, fill: "var(--gold, #B79766)", stroke: "#fff", strokeWidth: 2 }} 
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-black/10 bg-white p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl">Produtos Recentes</h2>
+        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-display text-xl">Últimos Drops</h2>
             <button
               onClick={() => onNavigate("catalogo")}
-              className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--gold)] hover:underline"
+              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--gold)] hover:underline"
             >
               Ver todos
             </button>
           </div>
-          <ul className="divide-y divide-black/5">
-            {recent.length === 0 && (
-              <li className="text-xs text-muted-foreground py-4">Nenhum produto ainda.</li>
-            )}
-            {recent.map((p) => (
-              <li key={p.id} className="flex items-center gap-3 py-3">
-                <div className="h-12 w-12 shrink-0 rounded-lg bg-neutral-100 overflow-hidden flex items-center justify-center">
-                  {p.image ? (
-                    <img src={p.image} alt={p.name} className="h-full w-full object-contain mix-blend-multiply" />
-                  ) : (
-                    <Icon icon="ph:image-duotone" className="w-5 h-5 text-black/30" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold uppercase tracking-wider truncate">{p.name || "Sem nome"}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {p.category} · Estoque {p.stock}
-                  </p>
-                </div>
-                <span className="font-mono text-xs">R${p.price.toFixed(2).replace(".", ",")}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="flex-1 overflow-hidden">
+            <ul className="divide-y divide-black/5">
+              {recent.length === 0 && (
+               <li className="text-xs text-muted-foreground py-4 text-center">Catálogo vazio.</li>
+              )}
+              {recent.map((p) => (
+                <li key={p.id} className="flex items-center gap-4 py-3.5 group">
+                  <div className="h-14 w-14 shrink-0 rounded-xl border border-black/5 bg-[#F7F4EF] overflow-hidden flex items-center justify-center transition group-hover:border-[color:var(--gold)]">
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} className="h-full w-full object-contain p-2 mix-blend-multiply" />
+                    ) : (
+                      <Icon icon="ph:t-shirt-duotone" className="w-6 h-6 text-black/20" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold uppercase tracking-wider truncate text-foreground">{p.name || "Sem nome"}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                      {p.category}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="block font-mono text-xs font-bold">R${p.price.toFixed(2).replace(".", ",")}</span>
+                    <span className="block text-[9px] uppercase tracking-widest text-black/40 mt-1">Estoque: {p.stock}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 
       <div>
-        <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">Ações Rápidas</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">Ações Rápidas</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
           {actions.map((a) => (
             <button
               key={a.label}
               onClick={() => onNavigate(a.target)}
-              className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white p-5 text-left transition hover:border-foreground hover:shadow-lg"
+              className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white p-6 text-left transition-all hover:border-black hover:shadow-lg"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition group-hover:bg-[color:var(--gold)]">
-                <Icon icon={a.icon} className="w-5 h-5" />
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F7F4EF] text-black transition group-hover:bg-black group-hover:text-white">
+                <Icon icon={a.icon} className="w-6 h-6" />
               </span>
-              <p className="mt-4 font-semibold">{a.label}</p>
+              <p className="mt-5 font-bold uppercase tracking-wider text-sm">{a.label}</p>
               <p className="text-xs text-muted-foreground mt-1">{a.hint}</p>
               <Icon
-                icon="ph:arrow-up-right"
-                className="absolute top-4 right-4 w-4 h-4 text-muted-foreground group-hover:text-[color:var(--gold)]"
+                icon="ph:arrow-up-right-bold"
+                className="absolute top-6 right-6 w-4 h-4 text-black/20 transition group-hover:text-[color:var(--gold)] group-hover:translate-x-1 group-hover:-translate-y-1"
               />
             </button>
           ))}
