@@ -1,78 +1,27 @@
 import { Icon } from "@iconify/react";
 import { useMemo } from "react";
-import {
-  ComposedChart,
-  Bar,
-  Line,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { useStore } from "@/lib/store";
 import type { AdminSection } from "@/components/admin/AdminSidebar";
-
-const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-// Tooltip Personalizado e Premium para mostrar a Conversão
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    const acessos = payload[0]?.value || 0;
-    const whatsapp = payload[1]?.value || 0;
-    const taxa = acessos > 0 ? ((whatsapp / acessos) * 100).toFixed(1) : "0.0";
-
-    return (
-      <div className="bg-white border border-black/10 p-4 rounded-2xl shadow-xl min-w-[160px]">
-        <p className="font-bold text-[10px] uppercase tracking-widest text-black/40 mb-3">{label}</p>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-6">
-            <span className="text-xs text-black/60 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-sm bg-neutral-200"></div>
-              Acessos
-            </span>
-            <span className="font-mono font-bold text-black">{acessos}</span>
-          </div>
-          <div className="flex items-center justify-between gap-6">
-            <span className="text-xs text-[color:var(--gold)] font-bold flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[color:var(--gold)]"></div>
-              WhatsApp
-            </span>
-            <span className="font-mono font-bold text-[color:var(--gold)]">{whatsapp}</span>
-          </div>
-          <div className="h-[1px] w-full bg-black/5 my-2" />
-          <div className="flex items-center justify-between gap-6">
-            <span className="text-[10px] text-black/40 uppercase tracking-widest">Conversão</span>
-            <span className="font-mono text-xs font-bold text-black">{taxa}%</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
 export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);
   const outOfStock = products.filter((p) => p.stock === 0 || p.tags.includes("ESGOTADO")).length;
 
-  const chartData = useMemo(() => {
-    const now = new Date();
-    return Array.from({ length: 12 }).map((_, i) => {
-      const month = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-      const baseAcessos = 1200 + Math.sin((i / 12) * Math.PI * 2) * 500;
-      const noise = ((i * 37) % 200) - 100;
-      const acessos = Math.max(300, Math.round(baseAcessos + noise));
-      
-      const conversionRate = 0.08 + (((i * 13) % 7) / 100);
-      const whatsapp = Math.round(acessos * conversionRate);
-      
-      return { name: MONTHS[month.getMonth()], acessos, whatsapp };
-    });
-  }, []);
-
+  // Pega os últimos produtos adicionados
   const recent = useMemo(() => products.slice(-5).reverse(), [products]);
+
+  // Simula os "Top Produtos" baseados nas peças que você tem cadastradas
+  const topProducts = useMemo(() => {
+    return [...products]
+      .map((p) => ({
+        ...p,
+        // Gera um número fictício de cliques apenas para visualização
+        cliques: 120 + (p.name.length * 8) + (p.stock * 3)
+      }))
+      .sort((a, b) => b.cliques - a.cliques)
+      .slice(0, 3);
+  }, [products]);
 
   const stats = [
     {
@@ -113,6 +62,7 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
         </p>
       </header>
 
+      {/* Cards de Métricas Rápidas */}
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((s) => (
           <div
@@ -141,81 +91,89 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
         ))}
       </div>
 
+      {/* O NOVO MÓDULO QUE SUBSTITUI O GRÁFICO */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="font-display text-xl">Engajamento & Leads</h2>
-              <p className="text-xs text-muted-foreground mt-1">Acessos ao catálogo vs. Contatos via WhatsApp</p>
-            </div>
-            <div className="hidden sm:flex items-center gap-5 text-[10px] uppercase tracking-[0.2em] font-bold">
-              <span className="flex items-center gap-2 text-black/40">
-                <span className="h-2.5 w-2.5 rounded-sm bg-neutral-200" /> Acessos
-              </span>
-              <span className="flex items-center gap-2 text-[color:var(--gold)]">
-                <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--gold)]" /> WhatsApp
-              </span>
-            </div>
+        <div className="lg:col-span-2 rounded-2xl border border-black/10 bg-white p-7 shadow-sm">
+          <div className="mb-8">
+            <h2 className="font-display text-2xl">Desempenho do Catálogo</h2>
+            <p className="text-xs text-muted-foreground mt-1">Análise de interesse nas peças e conversão de leads</p>
           </div>
-          
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
+            
+            {/* Lado Esquerdo: Funil de Retenção */}
+            <div>
+              <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-black/40 mb-6">Funil de Acessos</h3>
+              <div className="space-y-6">
                 
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fontSize: 10, fill: "#a3a3a3", fontWeight: 600 }} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  dy={10} 
-                />
-                
-                {/* Eixo Esquerdo (Acessos) */}
-                <YAxis 
-                  yAxisId="left" 
-                  tick={{ fontSize: 10, fill: "#a3a3a3", fontWeight: 600 }} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  dx={-10}
-                />
-                
-                {/* Eixo Direito Invisível (WhatsApp) - Permite que a linha escale livremente */}
-                <YAxis 
-                  yAxisId="right" 
-                  orientation="right" 
-                  hide={true} 
-                />
-                
-                <Tooltip 
-                  content={<CustomTooltip />} 
-                  cursor={{ fill: 'rgba(0,0,0,0.03)' }} 
-                />
-                
-                {/* Barras Minimalistas ao fundo */}
-                <Bar 
-                  yAxisId="left" 
-                  dataKey="acessos" 
-                  fill="#f2f2f2" 
-                  radius={[6, 6, 0, 0]} 
-                  maxBarSize={45} 
-                />
-                
-                {/* Linha Dourada em destaque na frente */}
-                <Line 
-                  yAxisId="right" 
-                  type="monotone" 
-                  dataKey="whatsapp" 
-                  stroke="var(--gold, #B79766)" 
-                  strokeWidth={3} 
-                  dot={{ r: 4, fill: "#fff", stroke: "var(--gold, #B79766)", strokeWidth: 2 }} 
-                  activeDot={{ r: 6, fill: "var(--gold, #B79766)", stroke: "#fff", strokeWidth: 2 }} 
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+                {/* Passo 1 */}
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-black/70">Visitantes no Site</span>
+                    <span className="font-mono text-sm font-bold">1.248</span>
+                  </div>
+                  <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-black/20 w-full h-full rounded-full"></div>
+                  </div>
+                </div>
+
+                {/* Passo 2 */}
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-black/70">Visualizaram Peças</span>
+                    <span className="font-mono text-sm font-bold">856</span>
+                  </div>
+                  <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-black/60 w-[68%] h-full rounded-full"></div>
+                  </div>
+                </div>
+
+                {/* Passo 3 */}
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--gold)]">Cliques no WhatsApp</span>
+                    <span className="font-mono text-sm font-bold text-[color:var(--gold)]">112</span>
+                  </div>
+                  <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-[color:var(--gold)] w-[12%] h-full rounded-full shadow-[0_0_10px_rgba(183,151,102,0.4)]"></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Lado Direito: Top Produtos */}
+            <div>
+              <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-black/40 mb-6">Top 3 Peças Populares</h3>
+              <div className="space-y-5">
+                {topProducts.length === 0 && (
+                  <p className="text-xs text-black/40 italic">Adicione produtos para ver o ranking.</p>
+                )}
+                {topProducts.map((p, index) => (
+                  <div key={p.id} className="flex items-center gap-4 group">
+                    <div className="font-display text-2xl text-black/10 font-bold group-hover:text-[color:var(--gold)] transition-colors">
+                      0{index + 1}
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-[#F7F4EF] border border-black/5 flex items-center justify-center overflow-hidden shrink-0">
+                      {p.image ? (
+                        <img src={p.image} alt={p.name} className="w-full h-full object-contain p-1 mix-blend-multiply" />
+                      ) : (
+                        <Icon icon="ph:t-shirt-duotone" className="w-5 h-5 text-black/20" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-wider truncate text-foreground">{p.name || "Produto"}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{p.cliques} interações</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
 
+        {/* Lista de Últimos Drops */}
         <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-display text-xl">Últimos Drops</h2>
@@ -233,22 +191,21 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
               )}
               {recent.map((p) => (
                 <li key={p.id} className="flex items-center gap-4 py-3.5 group">
-                  <div className="h-14 w-14 shrink-0 rounded-xl border border-black/5 bg-[#F7F4EF] overflow-hidden flex items-center justify-center transition group-hover:border-[color:var(--gold)]">
+                  <div className="h-12 w-12 shrink-0 rounded-xl border border-black/5 bg-[#F7F4EF] overflow-hidden flex items-center justify-center transition group-hover:border-[color:var(--gold)]">
                     {p.image ? (
-                      <img src={p.image} alt={p.name} className="h-full w-full object-contain p-2 mix-blend-multiply" />
+                      <img src={p.image} alt={p.name} className="h-full w-full object-contain p-1 mix-blend-multiply" />
                     ) : (
-                      <Icon icon="ph:t-shirt-duotone" className="w-6 h-6 text-black/20" />
+                      <Icon icon="ph:image-duotone" className="w-5 h-5 text-black/20" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold uppercase tracking-wider truncate text-foreground">{p.name || "Sem nome"}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-widest mt-1">
                       {p.category}
                     </p>
                   </div>
                   <div className="text-right">
                     <span className="block font-mono text-xs font-bold">R${p.price.toFixed(2).replace(".", ",")}</span>
-                    <span className="block text-[9px] uppercase tracking-widest text-black/40 mt-1">Estoque: {p.stock}</span>
                   </div>
                 </li>
               ))}
@@ -257,6 +214,7 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
         </div>
       </div>
 
+      {/* Ações Rápidas */}
       <div>
         <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">Ações Rápidas</h2>
         <div className="grid gap-4 sm:grid-cols-3">
