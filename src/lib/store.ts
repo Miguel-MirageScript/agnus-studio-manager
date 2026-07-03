@@ -1,12 +1,29 @@
 import { useSyncExternalStore } from "react";
 import { PRODUCTS as SEED, type Product, type StatusTag } from "@/lib/products";
+import heroImg from "@/assets/hero-lookbook.jpg";
+import loopImg from "@/assets/lookbook-loop.jpg";
 
-export type HangtagStyle = "classic" | "ribbon" | "seal";
+export type HangtagStyle =
+  | "classic"
+  | "ribbon"
+  | "seal"
+  | "metallic"
+  | "side-label"
+  | "minimal-float"
+  | "brutalist";
+
+export type ContainerStyle = "minimal" | "soft" | "brutalist";
+export type CategoryStyle = "serif-italic" | "wide-sans" | "stamp";
 
 export interface AdminProduct extends Product {
   category: string;
   stock: number;
   hangtag: HangtagStyle;
+}
+
+export interface FooterLink {
+  label: string;
+  href: string;
 }
 
 export interface Settings {
@@ -15,6 +32,14 @@ export interface Settings {
   instagramUrl: string;
   announcement: string;
   heroTitle: string;
+  heroImage: string;
+  lookbookTitle: string;
+  lookbookImages: string[];
+  footerTagline: string;
+  footerLinks: FooterLink[];
+  brandLine: string;
+  containerStyle: ContainerStyle;
+  categoryStyle: CategoryStyle;
 }
 
 interface State {
@@ -37,10 +62,23 @@ function seedState(): State {
     categories: ["Camisetas", "Edições Limitadas", "Acessórios"],
     settings: {
       whatsappNumber: "5511932212697",
-      whatsappMessage: "Olá! Gostaria de negociar a camiseta *{product}* que vi no catálogo.",
+      whatsappMessage:
+        "Olá! Gostaria de negociar a camiseta *{product}* que vi no catálogo. Link: {link}",
       instagramUrl: "https://instagram.com/agnus.1993",
       announcement: "FRETE GRÁTIS ACIMA DE R$ 350 — NOVO DROP.93",
       heroTitle: "LOOKBOOK.",
+      heroImage: heroImg,
+      lookbookTitle: "Lookbook Loop",
+      lookbookImages: [loopImg, loopImg, loopImg],
+      footerTagline: "Luxury Streetwear",
+      footerLinks: [
+        { label: "Guia de Tamanhos", href: "#" },
+        { label: "Sobre a Marca", href: "#" },
+        { label: "FAQ", href: "#" },
+      ],
+      brandLine: "AGNUS.1993",
+      containerStyle: "soft",
+      categoryStyle: "wide-sans",
     },
   };
 }
@@ -54,8 +92,12 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (!raw) return seedState();
     const parsed = JSON.parse(raw) as State;
-    // merge defaults defensively
-    return { ...seedState(), ...parsed, settings: { ...seedState().settings, ...parsed.settings } };
+    const seed = seedState();
+    return {
+      ...seed,
+      ...parsed,
+      settings: { ...seed.settings, ...parsed.settings },
+    };
   } catch {
     return seedState();
   }
@@ -116,7 +158,6 @@ export const store = {
     state = { ...state, categories: state.categories.filter((c) => c !== name) };
     emit();
   },
-  // NOVAS FUNÇÕES PARA SUPORTAR O ARRASTAR E SOLTAR (DRAG AND DROP)
   setCategories(categories: string[]) {
     state = { ...state, categories };
     emit();
@@ -131,8 +172,16 @@ export const store = {
   },
 };
 
-export function whatsappHref(productName: string, s: Settings = state.settings) {
-  const msg = s.whatsappMessage.replace(/\{product\}/g, productName);
+export function productLink(productId: string) {
+  if (typeof window === "undefined") return `/?p=${productId}`;
+  return `${window.location.origin}/?p=${productId}`;
+}
+
+export function whatsappHref(productName: string, productId?: string, s: Settings = state.settings) {
+  const link = productId ? productLink(productId) : (typeof window !== "undefined" ? window.location.origin : "");
+  const msg = s.whatsappMessage
+    .replace(/\{product\}/g, productName)
+    .replace(/\{link\}/g, link);
   return `https://wa.me/${s.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
 }
 

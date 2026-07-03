@@ -33,6 +33,48 @@ export function Hangtag({
       </div>
     );
   }
+  if (style === "metallic") {
+    return (
+      <div className={cn("absolute top-3 right-3 z-10", className)}>
+        <div
+          className="rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] uppercase text-foreground shadow-md border border-[color:var(--gold)]/70"
+          style={{
+            background:
+              "linear-gradient(135deg,#f5e7b8 0%,#c8a558 45%,#8a6a2e 60%,#e9d69a 100%)",
+          }}
+        >
+          {label}
+        </div>
+      </div>
+    );
+  }
+  if (style === "side-label") {
+    return (
+      <div className={cn("absolute top-0 right-0 z-10 h-full flex items-center", className)}>
+        <div className="bg-foreground text-background px-2 py-3 text-[8px] font-bold tracking-[0.3em] uppercase [writing-mode:vertical-rl] rotate-180">
+          {label}
+        </div>
+      </div>
+    );
+  }
+  if (style === "minimal-float") {
+    return (
+      <div className={cn("absolute top-4 left-4 z-10", className)}>
+        <span className="text-[9px] font-semibold tracking-[0.3em] uppercase text-foreground/70 border-b border-[color:var(--gold)] pb-0.5">
+          {label}
+        </span>
+      </div>
+    );
+  }
+  if (style === "brutalist") {
+    return (
+      <div className={cn("absolute top-3 left-3 z-10", className)}>
+        <div className="bg-white border-2 border-foreground px-2.5 py-1 text-[9px] font-black tracking-[0.15em] uppercase shadow-[3px_3px_0_0_var(--foreground)]">
+          {label}
+        </div>
+      </div>
+    );
+  }
   // classic — hanging tag with string
   return (
     <div className={cn("absolute top-0 right-6 z-10 flex flex-col items-center", className)}>

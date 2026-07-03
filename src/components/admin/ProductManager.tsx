@@ -5,7 +5,22 @@ import { Hangtag } from "@/components/brand/Hangtag";
 import { cn } from "@/lib/utils";
 import type { StatusTag } from "@/lib/products";
 import { createClient } from '@supabase/supabase-js';
-import { Reorder } from "framer-motion";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Supabase configuration
 const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
@@ -22,9 +37,13 @@ const STATUS_OPTIONS: StatusTag[] = [
 ];
 
 const HANGTAG_OPTIONS: { key: HangtagStyle; label: string; hint: string }[] = [
-  { key: "classic", label: "Classic Hangtag", hint: "Etiqueta pendurada com fio fino" },
+  { key: "classic", label: "Classic Hangtag", hint: "Etiqueta pendurada com fio" },
   { key: "ribbon", label: "Minimalist Ribbon", hint: "Faixa lateral discreta" },
-  { key: "seal", label: "Dark Seal", hint: "Selo circular escuro em relevo" },
+  { key: "seal", label: "Dark Seal", hint: "Selo circular escuro" },
+  { key: "metallic", label: "Metallic Gold", hint: "Selo dourado metálico" },
+  { key: "side-label", label: "Vertical Label", hint: "Etiqueta lateral vertical" },
+  { key: "minimal-float", label: "Minimal Float", hint: "Texto flutuante minimalista" },
+  { key: "brutalist", label: "Brutalist Box", hint: "Caixa dura com sombra sólida" },
 ];
 
 type Draft = Omit<AdminProduct, "id"> & { id?: string };
@@ -71,6 +90,10 @@ export function ProductManager() {
   const [newCat, setNewCat] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
   const save = async (fileToUpload: File | null) => {
     if (!editing || !editing.name.trim()) return;
     setLoading(true);
@@ -115,23 +138,31 @@ export function ProductManager() {
     }
   };
 
-  // Motor que salva a nova ordem dos produtos após você soltar o dedo
-  const handleReorderProducts = (category: string, reorderedCatProducts: AdminProduct[]) => {
+  const onCategoryDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = categories.indexOf(String(active.id));
+    const newIdx = categories.indexOf(String(over.id));
+    if (oldIdx < 0 || newIdx < 0) return;
+    store.setCategories(arrayMove(categories, oldIdx, newIdx));
+  };
+
+  const onProductDragEnd = (category: string) => (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const catProducts = products.filter((p) => p.category === category);
+    const oldIdx = catProducts.findIndex((p) => p.id === active.id);
+    const newIdx = catProducts.findIndex((p) => p.id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    const reordered = arrayMove(catProducts, oldIdx, newIdx);
+
     const newProducts: AdminProduct[] = [];
-    
-    // Reconstrói a lista global mantendo a ordem das categorias intacta
-    categories.forEach(cat => {
-      if (cat === category) {
-        newProducts.push(...reorderedCatProducts);
-      } else {
-        newProducts.push(...products.filter(p => p.category === cat));
-      }
+    categories.forEach((cat) => {
+      if (cat === category) newProducts.push(...reordered);
+      else newProducts.push(...products.filter((p) => p.category === cat));
     });
-
-    // Pega qualquer produto órfão (caso alguma categoria tenha sido deletada)
-    const orphaned = products.filter(p => !categories.includes(p.category));
+    const orphaned = products.filter((p) => !categories.includes(p.category));
     newProducts.push(...orphaned);
-
     store.setProducts(newProducts);
   };
 
@@ -141,7 +172,7 @@ export function ProductManager() {
         <div>
           <h1 className="font-display text-2xl md:text-3xl">Painel de Vitrine</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Arraste os itens pelo ícone para organizar seu catálogo.
+            Arraste em qualquer direção para organizar seu catálogo.
           </p>
         </div>
         <button
@@ -154,33 +185,24 @@ export function ProductManager() {
         </button>
       </header>
 
-      {/* Gerenciador de Categorias (DRAG AND DROP) */}
+      {/* Categories */}
       <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold mb-4 flex items-center gap-2 text-black/60">
           <Icon icon="ph:folders-duotone" className="w-5 h-5 text-[color:var(--gold)]" />
           Ordem das Categorias
         </h2>
-        
-        <Reorder.Group axis="y" values={categories} onReorder={store.setCategories} className="flex flex-col gap-2 mb-6">
-          {categories.map((c) => (
-            <Reorder.Item key={c} value={c} className="flex items-center justify-between bg-[#F7F4EF] border border-black/5 px-4 py-3 rounded-xl touch-none group">
-              <div className="flex items-center gap-4">
-                <div className="cursor-grab active:cursor-grabbing p-1 bg-white rounded-md shadow-sm border border-black/5 text-black/40 group-hover:text-black transition">
-                  <Icon icon="ph:dots-six-vertical-bold" className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider">{c}</span>
-              </div>
-              <button
-                onClick={() => {
-                  if(window.confirm(`Deletar categoria ${c}? Os produtos ficarão órfãos.`)) store.deleteCategory(c);
-                }}
-                className="rounded-full p-1.5 text-black/30 hover:text-red-600 hover:bg-red-50 transition"
-              >
-                <Icon icon="ph:trash-bold" className="w-4 h-4" />
-              </button>
-            </Reorder.Item>
-          ))}
-        </Reorder.Group>
+
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onCategoryDragEnd}>
+          <SortableContext items={categories} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-2 mb-6">
+              {categories.map((c) => (
+                <SortableCategoryRow key={c} id={c} onDelete={() => {
+                  if (window.confirm(`Deletar categoria ${c}? Os produtos ficarão órfãos.`)) store.deleteCategory(c);
+                }} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         <div className="flex gap-2 max-w-sm">
           <input
@@ -200,18 +222,17 @@ export function ProductManager() {
         </div>
       </section>
 
-      {/* Grid de Produtos Separado por Categoria (DRAG AND DROP) */}
+      {/* Products grid — 2D drag per category */}
       <div className="flex flex-col gap-12">
-        {categories.map(category => {
-          const catProducts = products.filter(p => p.category === category);
-          
+        {categories.map((category) => {
+          const catProducts = products.filter((p) => p.category === category);
           return (
             <section key={category} className="space-y-4">
               <div className="flex items-center gap-4 px-2">
                 <h3 className="font-display text-xl uppercase tracking-widest text-foreground">
                   {category}
                 </h3>
-                <div className="h-[1px] flex-1 bg-black/10"></div>
+                <div className="h-[1px] flex-1 bg-black/10" />
                 <span className="text-[10px] font-bold tracking-widest text-black/40">{catProducts.length} ITENS</span>
               </div>
 
@@ -220,57 +241,21 @@ export function ProductManager() {
                   <p className="text-xs text-black/40 uppercase tracking-widest font-bold">Nenhum produto em {category}</p>
                 </div>
               ) : (
-                <Reorder.Group 
-                  axis="y" 
-                  values={catProducts} 
-                  onReorder={(newOrder) => handleReorderProducts(category, newOrder)} 
-                  className="flex flex-col gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-6"
-                >
-                  {catProducts.map((p) => (
-                    <Reorder.Item key={p.id} value={p} className="relative touch-none rounded-2xl border border-black/10 bg-white p-4 shadow-sm group">
-                      
-                      {/* Puxador de Arrastar (Drag Handle) */}
-                      <div className="absolute top-6 left-6 z-10 cursor-grab active:cursor-grabbing bg-white/90 backdrop-blur border border-black/10 shadow-sm p-1.5 rounded-md text-black/50 hover:text-black transition">
-                        <Icon icon="ph:dots-six-vertical-bold" className="w-5 h-5" />
-                      </div>
-
-                      <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-[oklch(0.97_0.005_85)] flex items-center justify-center">
-                        {p.image ? (
-                          <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <Icon icon="ph:image-square-thin" className="w-12 h-12 text-black/10" />
-                        )}
-                        <Hangtag style={p.hangtag} label={p.tags[0] ?? "AGNUS.93"} />
-                      </div>
-                      
-                      <div className="mt-4">
-                        <h3 className="text-sm font-bold truncate tracking-wide">{p.name}</h3>
-                        <div className="mt-1.5 flex items-center justify-between text-xs">
-                          <span className="font-mono font-medium">R$ {p.price.toFixed(2)}</span>
-                          <span className={cn("font-mono font-medium", p.stock === 0 ? "text-red-600" : "text-black/50")}>
-                            Estoque: {p.stock}
-                          </span>
-                        </div>
-                        <div className="mt-4 flex gap-2">
-                          <button
-                            disabled={loading}
-                            onClick={() => setEditing({ ...p })}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-black/15 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:border-foreground hover:bg-black/5 transition disabled:opacity-50"
-                          >
-                            <Icon icon="ph:pencil-simple-bold" className="w-3.5 h-3.5" /> Editar
-                          </button>
-                          <button
-                            disabled={loading}
-                            onClick={() => handleDeleteProduct(p.id, p.image)}
-                            className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3.5 py-2.5 text-red-600 hover:border-red-600 hover:bg-red-50 transition disabled:opacity-50"
-                          >
-                            <Icon icon="ph:trash-bold" className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </Reorder.Item>
-                  ))}
-                </Reorder.Group>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onProductDragEnd(category)}>
+                  <SortableContext items={catProducts.map((p) => p.id)} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      {catProducts.map((p) => (
+                        <SortableProductCard
+                          key={p.id}
+                          product={p}
+                          loading={loading}
+                          onEdit={() => setEditing({ ...p })}
+                          onDelete={() => handleDeleteProduct(p.id, p.image)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </section>
           );
@@ -287,6 +272,110 @@ export function ProductManager() {
           onSave={save}
         />
       )}
+    </div>
+  );
+}
+
+function SortableCategoryRow({ id, onDelete }: { id: string; onDelete: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between bg-[#F7F4EF] border border-black/5 px-4 py-3 rounded-xl group"
+    >
+      <div className="flex items-center gap-4">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 bg-white rounded-md shadow-sm border border-black/5 text-black/40 group-hover:text-black transition touch-none"
+        >
+          <Icon icon="ph:dots-six-vertical-bold" className="w-4 h-4" />
+        </button>
+        <span className="text-xs font-bold uppercase tracking-wider">{id}</span>
+      </div>
+      <button
+        onClick={onDelete}
+        className="rounded-full p-1.5 text-black/30 hover:text-red-600 hover:bg-red-50 transition"
+      >
+        <Icon icon="ph:trash-bold" className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+function SortableProductCard({
+  product,
+  loading,
+  onEdit,
+  onDelete,
+}: {
+  product: AdminProduct;
+  loading: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: product.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : "auto",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative rounded-2xl border border-black/10 bg-white p-4 shadow-sm group"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        aria-label="Arrastar"
+        className="absolute top-6 left-6 z-10 cursor-grab active:cursor-grabbing bg-white/90 backdrop-blur border border-black/10 shadow-sm p-1.5 rounded-md text-black/50 hover:text-black transition touch-none"
+      >
+        <Icon icon="ph:dots-six-vertical-bold" className="w-5 h-5" />
+      </button>
+
+      <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-[oklch(0.97_0.005_85)] flex items-center justify-center">
+        {product.image ? (
+          <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+        ) : (
+          <Icon icon="ph:image-square-thin" className="w-12 h-12 text-black/10" />
+        )}
+        <Hangtag style={product.hangtag} label={product.tags[0] ?? "AGNUS.93"} />
+      </div>
+
+      <div className="mt-4">
+        <h3 className="text-sm font-bold truncate tracking-wide">{product.name}</h3>
+        <div className="mt-1.5 flex items-center justify-between text-xs">
+          <span className="font-mono font-medium">R$ {product.price.toFixed(2)}</span>
+          <span className={cn("font-mono font-medium", product.stock === 0 ? "text-red-600" : "text-black/50")}>
+            Estoque: {product.stock}
+          </span>
+        </div>
+        <div className="mt-4 flex gap-2">
+          <button
+            disabled={loading}
+            onClick={onEdit}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-black/15 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:border-foreground hover:bg-black/5 transition disabled:opacity-50"
+          >
+            <Icon icon="ph:pencil-simple-bold" className="w-3.5 h-3.5" /> Editar
+          </button>
+          <button
+            disabled={loading}
+            onClick={onDelete}
+            className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3.5 py-2.5 text-red-600 hover:border-red-600 hover:bg-red-50 transition disabled:opacity-50"
+          >
+            <Icon icon="ph:trash-bold" className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -353,11 +442,11 @@ function ProductEditor({
                   <span className="text-[10px]">Toque para selecionar da galeria</span>
                 </div>
               )}
-              <input 
-                type="file" 
-                accept="image/*" 
-                className="absolute inset-0 opacity-0 cursor-pointer" 
-                onChange={handleFileChange} 
+              <input
+                type="file"
+                accept="image/*"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handleFileChange}
                 disabled={loading}
               />
             </div>
@@ -421,7 +510,7 @@ function ProductEditor({
 
           <div>
             <Label>Estilo da Etiqueta no Card</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {HANGTAG_OPTIONS.map((h) => {
                 const selected = draft.hangtag === h.key;
                 return (
@@ -461,9 +550,9 @@ function ProductEditor({
         </div>
 
         <div className="border-t border-black/5 px-6 py-5 flex justify-end gap-3 sticky bottom-0 bg-white/95 backdrop-blur rounded-b-3xl">
-          <button 
+          <button
             type="button"
-            onClick={onCancel} 
+            onClick={onCancel}
             disabled={loading}
             className="px-5 py-3 text-[10px] uppercase tracking-widest font-bold text-black/50 hover:text-black hover:bg-black/5 rounded-xl transition disabled:opacity-50"
           >
@@ -509,7 +598,7 @@ function Field({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-black/15 px-4 py-3 text-sm font-medium outline-none focus:border-black transition disabled:opacity-50 bg-neutral-50 focus:bg-white"
+        className="w-full rounded-xl border border-black/15 px-4 py-3 text-sm outline-none focus:border-foreground transition disabled:opacity-50"
       />
     </div>
   );
