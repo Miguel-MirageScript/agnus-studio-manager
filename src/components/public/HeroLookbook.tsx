@@ -1,17 +1,17 @@
 import { Icon } from "@iconify/react";
 import { useState } from "react";
-import heroImg from "@/assets/hero-lookbook.jpg";
 import { useStore } from "@/lib/store";
 
 export function HeroLookbook() {
   const [playing, setPlaying] = useState(true);
   const title = useStore((s) => s.settings.heroTitle);
+  const heroImage = useStore((s) => s.settings.heroImage);
   return (
     <section className="relative overflow-hidden bg-[oklch(0.96_0.005_85)]">
       <div className="relative aspect-[16/10] md:aspect-[21/9] w-full">
         <img
-          src={heroImg}
-          alt="AGNUS.1993 Lookbook 93"
+          src={heroImage}
+          alt="AGNUS.1993 Lookbook"
           className={`h-full w-full object-cover object-top transition-transform duration-[6000ms] ease-out ${playing ? "scale-105" : "scale-100"}`}
           width={1600}
           height={900}
@@ -19,7 +19,8 @@ export function HeroLookbook() {
         <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center px-6">
           <h1 className="font-display text-[13vw] md:text-[9vw] leading-none font-bold tracking-tighter text-foreground">
-            {title.replace(/\.$/, "")}<span className="text-[color:var(--gold)]">.</span>
+            {title.replace(/\.$/, "")}
+            <span className="text-[color:var(--gold)]">.</span>
           </h1>
         </div>
         <div className="absolute bottom-4 left-4 md:bottom-6 md:left-8 flex gap-2">
