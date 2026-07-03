@@ -36,19 +36,43 @@ export function AdminSidebar({
                 "group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition",
                 isActive
                   ? "bg-foreground text-background shadow-md"
-                  : "text-foreground hover:bg-black/5"
+                  : "text-foreground hover:bg-black/5",
               )}
             >
-              <Icon icon={i.icon} className={cn("w-5 h-5 shrink-0 transition", isActive ? "text-[color:var(--gold)]" : "text-foreground/70 group-hover:text-[color:var(--gold)]")} />
+              <Icon
+                icon={i.icon}
+                className={cn(
+                  "w-5 h-5 shrink-0 transition",
+                  isActive
+                    ? "text-[color:var(--gold)]"
+                    : "text-foreground/70 group-hover:text-[color:var(--gold)]",
+                )}
+              />
               <span className="truncate">{i.label}</span>
-              {isActive && <Icon icon="ph:dot-outline-fill" className="ml-auto w-4 h-4 text-[color:var(--gold)]" />}
+              {isActive && (
+                <Icon icon="ph:dot-outline-fill" className="ml-auto w-4 h-4 text-[color:var(--gold)]" />
+              )}
             </button>
           );
         })}
       </nav>
+
+      <a
+        href="/"
+        target="_blank"
+        rel="noreferrer"
+        className="mt-6 flex items-center justify-between gap-2 rounded-xl bg-[color:var(--gold)]/10 border border-[color:var(--gold)]/30 px-3 py-2.5 text-[11px] uppercase tracking-[0.2em] font-semibold text-foreground hover:bg-[color:var(--gold)]/20 transition"
+      >
+        <span className="flex items-center gap-2">
+          <Icon icon="ph:eye-duotone" className="w-4 h-4 text-[color:var(--gold)]" />
+          Ver Catálogo
+        </span>
+        <Icon icon="ph:arrow-up-right-bold" className="w-3.5 h-3.5" />
+      </a>
+
       <button
         onClick={onLogout}
-        className="mt-6 flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs uppercase tracking-brand text-muted-foreground hover:text-foreground border border-transparent hover:border-black/10 transition"
+        className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs uppercase tracking-brand text-muted-foreground hover:text-foreground border border-transparent hover:border-black/10 transition"
       >
         <Icon icon="ph:sign-out" className="w-4 h-4" />
         Sair
