@@ -23,12 +23,16 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
     const now = new Date();
     return Array.from({ length: 12 }).map((_, i) => {
       const month = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-      // pseudo-deterministic pretty curve
-      const base = 320 + Math.sin((i / 12) * Math.PI * 2) * 140;
-      const noise = ((i * 37) % 60) - 30;
-      const sales = Math.max(60, Math.round(base + noise));
-      const views = sales * 7 + ((i * 53) % 200);
-      return { name: MONTHS[month.getMonth()], visualizações: views, vendas: sales };
+      // Curva simulada realista para acessos a um catálogo
+      const baseAcessos = 1200 + Math.sin((i / 12) * Math.PI * 2) * 500;
+      const noise = ((i * 37) % 200) - 100;
+      const acessos = Math.max(300, Math.round(baseAcessos + noise));
+      
+      // Cliques no WhatsApp (Leads) costumam ser uma fração dos acessos totais (ex: 8% a 15%)
+      const conversionRate = 0.08 + (((i * 13) % 7) / 100);
+      const whatsapp = Math.round(acessos * conversionRate);
+      
+      return { name: MONTHS[month.getMonth()], acessos, whatsapp };
     });
   }, []);
 
@@ -69,7 +73,7 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
         </p>
         <h1 className="font-display text-3xl md:text-4xl mt-1">Central de Produtividade</h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-xl">
-          Métricas do catálogo AGNUS.1993 em tempo real, com atalhos para as operações mais frequentes.
+          Métricas do catálogo em tempo real, com atalhos para as operações mais frequentes.
         </p>
       </header>
 
@@ -105,15 +109,15 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
         <div className="lg:col-span-2 rounded-2xl border border-black/10 bg-white p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-display text-xl">Visualizações & Vendas</h2>
-              <p className="text-xs text-muted-foreground">Últimos 12 meses (dados simulados)</p>
+              <h2 className="font-display text-xl">Engajamento & Leads</h2>
+              <p className="text-xs text-muted-foreground">Acessos ao catálogo vs. Contatos via WhatsApp</p>
             </div>
             <div className="hidden sm:flex items-center gap-4 text-[10px] uppercase tracking-[0.2em]">
               <span className="flex items-center gap-2 text-foreground/70">
-                <span className="h-2 w-2 rounded-full bg-foreground" /> Views
+                <span className="h-2 w-2 rounded-full bg-foreground" /> Acessos
               </span>
               <span className="flex items-center gap-2 text-foreground/70">
-                <span className="h-2 w-2 rounded-full bg-[color:var(--gold)]" /> Vendas
+                <span className="h-2 w-2 rounded-full bg-[color:var(--gold)]" /> WhatsApp
               </span>
             </div>
           </div>
@@ -121,11 +125,11 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="gViews" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="gAcessos" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#0a0a0a" stopOpacity={0.35} />
                     <stop offset="100%" stopColor="#0a0a0a" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="gSales" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="gWhatsapp" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#B79766" stopOpacity={0.55} />
                     <stop offset="100%" stopColor="#B79766" stopOpacity={0} />
                   </linearGradient>
@@ -143,17 +147,17 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
                 />
                 <Area
                   type="monotone"
-                  dataKey="visualizações"
+                  dataKey="acessos"
                   stroke="#0a0a0a"
                   strokeWidth={2}
-                  fill="url(#gViews)"
+                  fill="url(#gAcessos)"
                 />
                 <Area
                   type="monotone"
-                  dataKey="vendas"
+                  dataKey="whatsapp"
                   stroke="#B79766"
                   strokeWidth={2}
-                  fill="url(#gSales)"
+                  fill="url(#gWhatsapp)"
                 />
               </AreaChart>
             </ResponsiveContainer>
