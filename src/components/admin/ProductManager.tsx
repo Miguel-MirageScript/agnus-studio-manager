@@ -1,12 +1,13 @@
 import { Icon } from "@iconify/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { store, useStore, type AdminProduct, type HangtagStyle } from "@/lib/store";
 import { Hangtag } from "@/components/brand/Hangtag";
 import { cn } from "@/lib/utils";
 import type { StatusTag } from "@/lib/products";
 import { createClient } from '@supabase/supabase-js';
+import { Reorder } from "framer-motion";
 
-// Supabase configuration - using provided values
+// Supabase configuration
 const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -39,25 +40,16 @@ const emptyDraft = (category: string): Draft => ({
   hangtag: "classic",
 });
 
-// Corrected function: Upload image to Supabase and return public URL
 async function uploadToSupabase(file: File): Promise<string> {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-  // Uses the official library for a secure upload
   const { data, error } = await supabase.storage
     .from('products')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
+    .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
-  if (error) {
-    console.error("Supabase storage error details:", error);
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
-  // Generates the definitive public URL for the image
   const { data: publicUrlData } = supabase.storage
     .from('products')
     .getPublicUrl(fileName);
@@ -65,20 +57,11 @@ async function uploadToSupabase(file: File): Promise<string> {
   return publicUrlData.publicUrl;
 }
 
-// Corrected function: Delete file from Supabase storage
 async function deleteFromSupabase(imageUrl: string) {
   const prefix = `${supabaseUrl}/storage/v1/object/public/products/`;
   if (!imageUrl || !imageUrl.startsWith(prefix)) return;
-
   const fileName = imageUrl.replace(prefix, "");
-
-  const { error } = await supabase.storage
-    .from('products')
-    .remove([fileName]);
-
-  if (error) {
-    console.error("Error deleting file:", error);
-  }
+  await supabase.storage.from('products').remove([fileName]);
 }
 
 export function ProductManager() {
@@ -95,16 +78,11 @@ export function ProductManager() {
     try {
       let finalImageUrl = editing.image;
 
-      // If a new image was selected
       if (fileToUpload) {
-        // Space optimization: if editing and an old image exists, remove it from Supabase
         if (editing.id) {
           const oldProduct = products.find(p => p.id === editing.id);
-          if (oldProduct && oldProduct.image) {
-            await deleteFromSupabase(oldProduct.image);
-          }
+          if (oldProduct && oldProduct.image) await deleteFromSupabase(oldProduct.image);
         }
-        // Upload the new image and get the URL
         finalImageUrl = await uploadToSupabase(fileToUpload);
       }
 
@@ -117,127 +95,186 @@ export function ProductManager() {
       }
       setEditing(null);
     } catch (error: any) {
-      alert("Error saving product to Supabase: " + (error.message || "Upload failed"));
+      alert("Erro ao salvar produto no Supabase: " + (error.message || "Upload falhou"));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteProduct = async (id: string, imageUrl: string) => {
-    if (window.confirm("Are you sure you want to delete this product? The image will also be removed from the server.")) {
+    if (window.confirm("Certeza que deseja excluir? A imagem também sairá do servidor.")) {
       setLoading(true);
       try {
-        // 1. Remove the physical file from Supabase Storage
         await deleteFromSupabase(imageUrl);
-        // 2. Remove the product record
         store.deleteProduct(id);
       } catch (error: any) {
-        alert("Error removing image from server: " + (error.message || "Deletion failed"));
+        alert("Erro ao remover imagem: " + (error.message || "Falha ao deletar"));
       } finally {
         setLoading(false);
       }
     }
   };
 
+  // Motor que salva a nova ordem dos produtos após você soltar o dedo
+  const handleReorderProducts = (category: string, reorderedCatProducts: AdminProduct[]) => {
+    const newProducts: AdminProduct[] = [];
+    
+    // Reconstrói a lista global mantendo a ordem das categorias intacta
+    categories.forEach(cat => {
+      if (cat === category) {
+        newProducts.push(...reorderedCatProducts);
+      } else {
+        newProducts.push(...products.filter(p => p.category === cat));
+      }
+    });
+
+    // Pega qualquer produto órfão (caso alguma categoria tenha sido deletada)
+    const orphaned = products.filter(p => !categories.includes(p.category));
+    newProducts.push(...orphaned);
+
+    store.setProducts(newProducts);
+  };
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-10 pb-20">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-black/5 pb-6">
         <div>
-          <h1 className="font-display text-2xl md:text-3xl">Catálogo de Produtos</h1>
+          <h1 className="font-display text-2xl md:text-3xl">Painel de Vitrine</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            CRUD completo conectado ao Supabase Storage.
+            Arraste os itens pelo ícone para organizar seu catálogo.
           </p>
         </div>
         <button
           disabled={loading}
           onClick={() => setEditing(emptyDraft(categories[0] ?? "Camisetas"))}
-          className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] hover:bg-[color:var(--gold)] hover:text-foreground transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--gold)] hover:text-foreground transition disabled:opacity-50 shadow-md"
         >
           <Icon icon="ph:plus-bold" className="w-4 h-4" />
           Novo Produto
         </button>
       </header>
 
-      {/* Categories */}
-      <section className="rounded-2xl border border-black/10 bg-white p-5">
-        <h2 className="text-xs uppercase tracking-[0.2em] font-semibold mb-3 flex items-center gap-2">
-          <Icon icon="ph:folders-duotone" className="w-4 h-4 text-[color:var(--gold)]" />
-          Categorias
+      {/* Gerenciador de Categorias (DRAG AND DROP) */}
+      <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+        <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold mb-4 flex items-center gap-2 text-black/60">
+          <Icon icon="ph:folders-duotone" className="w-5 h-5 text-[color:var(--gold)]" />
+          Ordem das Categorias
         </h2>
-        <div className="flex flex-wrap gap-2">
+        
+        <Reorder.Group axis="y" values={categories} onReorder={store.setCategories} className="flex flex-col gap-2 mb-6">
           {categories.map((c) => (
-            <span key={c} className="group inline-flex items-center gap-1.5 rounded-full border border-black/10 pl-3 pr-1.5 py-1 text-xs">
-              {c}
+            <Reorder.Item key={c} value={c} className="flex items-center justify-between bg-[#F7F4EF] border border-black/5 px-4 py-3 rounded-xl touch-none group">
+              <div className="flex items-center gap-4">
+                <div className="cursor-grab active:cursor-grabbing p-1 bg-white rounded-md shadow-sm border border-black/5 text-black/40 group-hover:text-black transition">
+                  <Icon icon="ph:dots-six-vertical-bold" className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider">{c}</span>
+              </div>
               <button
-                onClick={() => store.deleteCategory(c)}
-                className="rounded-full p-0.5 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  if(window.confirm(`Deletar categoria ${c}? Os produtos ficarão órfãos.`)) store.deleteCategory(c);
+                }}
+                className="rounded-full p-1.5 text-black/30 hover:text-red-600 hover:bg-red-50 transition"
               >
-                <Icon icon="ph:x-bold" className="w-3 h-3" />
+                <Icon icon="ph:trash-bold" className="w-4 h-4" />
               </button>
-            </span>
+            </Reorder.Item>
           ))}
-        </div>
-        <div className="mt-3 flex gap-2">
+        </Reorder.Group>
+
+        <div className="flex gap-2 max-w-sm">
           <input
             value={newCat}
             onChange={(e) => setNewCat(e.target.value)}
-            placeholder="Nova categoria"
-            className="flex-1 rounded-lg border border-black/15 px-3 py-2 text-sm outline-none focus:border-foreground"
+            placeholder="Criar nova categoria..."
+            className="flex-1 rounded-xl border border-black/15 px-4 py-2.5 text-sm outline-none focus:border-foreground bg-neutral-50"
           />
           <button
             onClick={() => {
-              if (newCat.trim()) {
-                store.addCategory(newCat.trim());
-                setNewCat("");
-              }
+              if (newCat.trim()) { store.addCategory(newCat.trim()); setNewCat(""); }
             }}
-            className="rounded-lg bg-foreground text-background px-4 text-xs font-semibold uppercase tracking-widest"
+            className="rounded-xl bg-foreground text-background px-5 text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--gold)] transition"
           >
             Adicionar
           </button>
         </div>
       </section>
 
-      {/* Product grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p) => (
-          <div key={p.id} className="rounded-2xl border border-black/10 bg-white p-4">
-            <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-[oklch(0.97_0.005_85)] flex items-center justify-center">
-              {p.image ? (
-                <img src={p.image} alt={p.name} className="h-full w-full object-cover p-6" />
+      {/* Grid de Produtos Separado por Categoria (DRAG AND DROP) */}
+      <div className="flex flex-col gap-12">
+        {categories.map(category => {
+          const catProducts = products.filter(p => p.category === category);
+          
+          return (
+            <section key={category} className="space-y-4">
+              <div className="flex items-center gap-4 px-2">
+                <h3 className="font-display text-xl uppercase tracking-widest text-foreground">
+                  {category}
+                </h3>
+                <div className="h-[1px] flex-1 bg-black/10"></div>
+                <span className="text-[10px] font-bold tracking-widest text-black/40">{catProducts.length} ITENS</span>
+              </div>
+
+              {catProducts.length === 0 ? (
+                <div className="text-center p-8 border-2 border-dashed border-black/10 rounded-2xl bg-white/50">
+                  <p className="text-xs text-black/40 uppercase tracking-widest font-bold">Nenhum produto em {category}</p>
+                </div>
               ) : (
-                <Icon icon="ph:image-square-thin" className="w-12 h-12 text-black/10" />
+                <Reorder.Group 
+                  axis="y" 
+                  values={catProducts} 
+                  onReorder={(newOrder) => handleReorderProducts(category, newOrder)} 
+                  className="flex flex-col gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-6"
+                >
+                  {catProducts.map((p) => (
+                    <Reorder.Item key={p.id} value={p} className="relative touch-none rounded-2xl border border-black/10 bg-white p-4 shadow-sm group">
+                      
+                      {/* Puxador de Arrastar (Drag Handle) */}
+                      <div className="absolute top-6 left-6 z-10 cursor-grab active:cursor-grabbing bg-white/90 backdrop-blur border border-black/10 shadow-sm p-1.5 rounded-md text-black/50 hover:text-black transition">
+                        <Icon icon="ph:dots-six-vertical-bold" className="w-5 h-5" />
+                      </div>
+
+                      <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-[oklch(0.97_0.005_85)] flex items-center justify-center">
+                        {p.image ? (
+                          <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <Icon icon="ph:image-square-thin" className="w-12 h-12 text-black/10" />
+                        )}
+                        <Hangtag style={p.hangtag} label={p.tags[0] ?? "AGNUS.93"} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3 className="text-sm font-bold truncate tracking-wide">{p.name}</h3>
+                        <div className="mt-1.5 flex items-center justify-between text-xs">
+                          <span className="font-mono font-medium">R$ {p.price.toFixed(2)}</span>
+                          <span className={cn("font-mono font-medium", p.stock === 0 ? "text-red-600" : "text-black/50")}>
+                            Estoque: {p.stock}
+                          </span>
+                        </div>
+                        <div className="mt-4 flex gap-2">
+                          <button
+                            disabled={loading}
+                            onClick={() => setEditing({ ...p })}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-black/15 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:border-foreground hover:bg-black/5 transition disabled:opacity-50"
+                          >
+                            <Icon icon="ph:pencil-simple-bold" className="w-3.5 h-3.5" /> Editar
+                          </button>
+                          <button
+                            disabled={loading}
+                            onClick={() => handleDeleteProduct(p.id, p.image)}
+                            className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3.5 py-2.5 text-red-600 hover:border-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                          >
+                            <Icon icon="ph:trash-bold" className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
               )}
-              <Hangtag style={p.hangtag} label={p.tags[0] ?? "AGNUS.93"} />
-            </div>
-            <div className="mt-3">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{p.category}</p>
-              <h3 className="text-sm font-semibold truncate">{p.name}</h3>
-              <div className="mt-1 flex items-center justify-between text-xs">
-                <span className="font-mono">R$ {p.price.toFixed(2)}</span>
-                <span className={cn("font-mono", p.stock === 0 ? "text-red-600" : "text-muted-foreground")}>
-                  Estoque: {p.stock}
-                </span>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  disabled={loading}
-                  onClick={() => setEditing({ ...p })}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/15 py-2 text-[11px] font-semibold uppercase tracking-widest hover:border-foreground disabled:opacity-50"
-                >
-                  <Icon icon="ph:pencil-simple" className="w-3.5 h-3.5" /> Editar
-                </button>
-                <button
-                  disabled={loading}
-                  onClick={() => handleDeleteProduct(p.id, p.image)}
-                  className="inline-flex items-center justify-center rounded-lg border border-black/15 px-3 py-2 text-red-600 hover:border-red-600 hover:bg-red-50 disabled:opacity-50"
-                >
-                  <Icon icon="ph:trash" className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
+            </section>
+          );
+        })}
       </div>
 
       {editing && (
@@ -290,31 +327,30 @@ function ProductEditor({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onCancel}>
       <div
-        className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-black/10 px-6 py-4 sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between border-b border-black/10 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur z-10">
           <h3 className="font-display text-xl flex items-center gap-2">
-            <Icon icon="ph:t-shirt-duotone" className="text-[color:var(--gold)]" />
-            {draft.id ? "Editar Produto" : "Novo Produto"}
+            <Icon icon="ph:t-shirt-duotone" className="text-[color:var(--gold)] w-6 h-6" />
+            {draft.id ? "Editar Produto" : "Novo Drop"}
           </h3>
-          <button onClick={onCancel} className="p-2 rounded-full hover:bg-black/5">
-            <Icon icon="ph:x" className="w-4 h-4" />
+          <button onClick={onCancel} className="p-2 rounded-full text-black/40 hover:bg-black/5 hover:text-black transition">
+            <Icon icon="ph:x-bold" className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* UPLOAD BOX COM PREVIEW REAL */}
+        <div className="p-6 space-y-6">
           <div>
             <Label>Imagem do Produto</Label>
-            <div className="relative w-full h-52 rounded-xl border-2 border-dashed border-black/15 bg-neutral-50 flex flex-col items-center justify-center cursor-pointer hover:border-foreground overflow-hidden transition group">
+            <div className="relative w-full h-56 rounded-2xl border-2 border-dashed border-black/15 bg-neutral-50 flex flex-col items-center justify-center cursor-pointer hover:border-black/40 hover:bg-neutral-100 transition group overflow-hidden">
               {preview ? (
-                <img src={preview} alt="Preview" className="h-full w-full object-contain p-4 bg-white" />
+                <img src={preview} alt="Preview" className="h-full w-full object-contain p-4 mix-blend-multiply" />
               ) : (
-                <div className="flex flex-col items-center text-muted-foreground text-xs gap-1">
-                  <Icon icon="ph:cloud-arrow-up-duotone" className="w-8 h-8 text-[color:var(--gold)]" />
-                  <span className="font-semibold text-black/70">Selecionar Mockup ou Foto</span>
-                  <span className="text-[10px]">Toque para abrir a galeria</span>
+                <div className="flex flex-col items-center text-black/40 gap-2">
+                  <Icon icon="ph:cloud-arrow-up-duotone" className="w-10 h-10 text-[color:var(--gold)]" />
+                  <span className="font-bold text-xs uppercase tracking-widest text-black/60">Upload de Mockup</span>
+                  <span className="text-[10px]">Toque para selecionar da galeria</span>
                 </div>
               )}
               <input 
@@ -327,7 +363,7 @@ function ProductEditor({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <Field label="Nome do Produto" value={draft.name} disabled={loading} onChange={(v) => onChange({ ...draft, name: v })} />
             <Field
               label="Preço (R$)"
@@ -342,7 +378,7 @@ function ProductEditor({
                 value={draft.category}
                 disabled={loading}
                 onChange={(e) => onChange({ ...draft, category: e.target.value })}
-                className="w-full rounded-lg border border-black/15 px-3 py-2.5 text-sm bg-white outline-none focus:border-foreground"
+                className="w-full rounded-xl border border-black/15 px-4 py-3 text-sm font-medium bg-white outline-none focus:border-black transition"
               >
                 {categories.map((c) => (
                   <option key={c}>{c}</option>
@@ -359,7 +395,7 @@ function ProductEditor({
           </div>
 
           <div>
-            <Label>Status Tags</Label>
+            <Label>Status Tags (Filtros)</Label>
             <div className="flex flex-wrap gap-2">
               {STATUS_OPTIONS.map((t) => {
                 const on = draft.tags.includes(t);
@@ -370,10 +406,10 @@ function ProductEditor({
                     disabled={loading}
                     onClick={() => toggleTag(t)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition",
+                      "rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all",
                       on
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-black/15 text-muted-foreground hover:border-foreground",
+                        ? "border-black bg-black text-white shadow-md"
+                        : "border-black/15 text-black/50 hover:border-black/40 hover:text-black",
                     )}
                   >
                     {t}
@@ -384,8 +420,8 @@ function ProductEditor({
           </div>
 
           <div>
-            <Label>Estilo da Tag no Card (Hangtag)</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Label>Estilo da Etiqueta no Card</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {HANGTAG_OPTIONS.map((h) => {
                 const selected = draft.hangtag === h.key;
                 return (
@@ -395,20 +431,22 @@ function ProductEditor({
                     disabled={loading}
                     onClick={() => onChange({ ...draft, hangtag: h.key })}
                     className={cn(
-                      "relative rounded-xl border-2 p-3 text-left transition bg-[#F7F4EF]",
-                      selected ? "border-[color:var(--gold)] shadow-md" : "border-black/10 hover:border-foreground",
+                      "relative rounded-2xl border-2 p-4 text-left transition-all bg-[#F7F4EF]",
+                      selected ? "border-[color:var(--gold)] shadow-lg scale-[1.02]" : "border-black/5 hover:border-black/20",
                     )}
                   >
-                    <div className="relative h-24 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                    <div className="relative h-24 rounded-xl overflow-hidden bg-white flex items-center justify-center border border-black/5 shadow-inner">
                       {preview ? (
-                        <img src={preview} alt="" className="h-full object-contain p-2" />
+                        <img src={preview} alt="" className="h-full object-contain p-2 mix-blend-multiply" />
                       ) : (
-                        <div className="text-[9px] text-black/20">Sem preview</div>
+                        <div className="text-[9px] text-black/20 font-bold uppercase tracking-widest">Sem Arte</div>
                       )}
                       <Hangtag style={h.key} label={draft.tags[0] ?? "AGNUS.93"} />
                     </div>
-                    <p className="mt-2 text-xs font-semibold">{h.label}</p>
-                    <p className="text-[9px] text-muted-foreground">{h.hint}</p>
+                    <div className="mt-3">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-black">{h.label}</p>
+                      <p className="text-[9px] text-black/50 mt-1">{h.hint}</p>
+                    </div>
                     {selected && (
                       <Icon
                         icon="ph:check-circle-fill"
@@ -422,12 +460,12 @@ function ProductEditor({
           </div>
         </div>
 
-        <div className="border-t border-black/10 px-6 py-4 flex justify-end gap-2 sticky bottom-0 bg-white">
+        <div className="border-t border-black/5 px-6 py-5 flex justify-end gap-3 sticky bottom-0 bg-white/95 backdrop-blur rounded-b-3xl">
           <button 
             type="button"
             onClick={onCancel} 
             disabled={loading}
-            className="px-4 py-2.5 text-xs uppercase tracking-widest font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
+            className="px-5 py-3 text-[10px] uppercase tracking-widest font-bold text-black/50 hover:text-black hover:bg-black/5 rounded-xl transition disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -435,10 +473,10 @@ function ProductEditor({
             type="button"
             disabled={loading}
             onClick={() => onSave(file)}
-            className="rounded-full bg-foreground text-background px-6 py-2.5 text-xs uppercase tracking-widest font-semibold hover:bg-[color:var(--gold)] hover:text-foreground transition flex items-center gap-2 disabled:opacity-70"
+            className="rounded-xl bg-black text-white px-8 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-[color:var(--gold)] transition shadow-lg flex items-center gap-2 disabled:opacity-70"
           >
             {loading && <Icon icon="line-md:loading-twotone-loop" className="w-4 h-4" />}
-            {loading ? "Processando..." : "Salvar"}
+            {loading ? "Processando..." : "Salvar Produto"}
           </button>
         </div>
       </div>
@@ -447,7 +485,7 @@ function ProductEditor({
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-foreground/70 mb-2">{children}</p>;
+  return <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-black/40 mb-2">{children}</p>;
 }
 
 function Field({
@@ -471,7 +509,7 @@ function Field({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-black/15 px-3 py-2.5 text-sm outline-none focus:border-foreground disabled:opacity-50"
+        className="w-full rounded-xl border border-black/15 px-4 py-3 text-sm font-medium outline-none focus:border-black transition disabled:opacity-50 bg-neutral-50 focus:bg-white"
       />
     </div>
   );
