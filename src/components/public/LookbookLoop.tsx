@@ -1,29 +1,35 @@
 import { Icon } from "@iconify/react";
 import { useState } from "react";
-import loopImg from "@/assets/lookbook-loop.jpg";
+import { useStore } from "@/lib/store";
 
 export function LookbookLoop() {
   const [index, setIndex] = useState(1);
-  const frames = [0, 1, 2];
+  const title = useStore((s) => s.settings.lookbookTitle);
+  const images = useStore((s) => s.settings.lookbookImages);
+  const frames = images.slice(0, 3);
+  const max = Math.max(0, frames.length - 1);
+
   return (
     <section className="bg-[oklch(0.97_0.005_85)]">
       <div className="mx-auto max-w-7xl px-5 py-10 md:px-8">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-2xl md:text-3xl">Lookbook Loop</h2>
+          <h2 className="font-display text-2xl md:text-3xl">{title}</h2>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <button onClick={() => setIndex((i) => Math.max(0, i - 1))} className="p-1.5 hover:text-foreground" aria-label="Anterior"><Icon icon="ph:caret-left" className="w-4 h-4" /></button>
+            <button onClick={() => setIndex((i) => Math.max(0, i - 1))} className="p-1.5 hover:text-foreground" aria-label="Anterior">
+              <Icon icon="ph:caret-left" className="w-4 h-4" />
+            </button>
             <Icon icon="ph:play-fill" className="w-3.5 h-3.5 text-[color:var(--gold)]" />
-            <button onClick={() => setIndex((i) => Math.min(2, i + 1))} className="p-1.5 hover:text-foreground" aria-label="Próximo"><Icon icon="ph:caret-right" className="w-4 h-4" /></button>
+            <button onClick={() => setIndex((i) => Math.min(max, i + 1))} className="p-1.5 hover:text-foreground" aria-label="Próximo">
+              <Icon icon="ph:caret-right" className="w-4 h-4" />
+            </button>
           </div>
         </div>
         <div className="relative overflow-hidden rounded-xl border border-black/5 bg-neutral-100">
           <div className="grid grid-cols-3 gap-1">
-            {frames.map((i) => (
+            {frames.map((src, i) => (
               <div key={i} className={`relative aspect-[3/4] overflow-hidden transition ${i === index ? "" : "grayscale opacity-70"}`}>
-                <img src={loopImg} alt="Lookbook frame" loading="lazy" className="h-full w-full object-cover" />
-                {i === index && (
-                  <div className="absolute inset-4 rounded-lg border-2 border-white/80 pointer-events-none" />
-                )}
+                <img src={src} alt="Lookbook frame" loading="lazy" className="h-full w-full object-cover" />
+                {i === index && <div className="absolute inset-4 rounded-lg border-2 border-white/80 pointer-events-none" />}
               </div>
             ))}
           </div>
@@ -39,11 +45,8 @@ export function LookbookLoop() {
         </div>
         <div className="mt-3 flex items-center justify-between">
           <div className="flex-1 mx-4 h-1 rounded-full bg-black/5 overflow-hidden">
-            <div className="h-full bg-foreground transition-all" style={{ width: `${((index + 1) / 3) * 100}%` }} />
+            <div className="h-full bg-foreground transition-all" style={{ width: `${((index + 1) / Math.max(frames.length, 1)) * 100}%` }} />
           </div>
-          <button className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-            <Icon icon="ph:eye" className="w-3.5 h-3.5" /> View
-          </button>
         </div>
       </div>
     </section>
