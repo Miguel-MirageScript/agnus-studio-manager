@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils";
 type EditMode = "announce" | "header" | "hero" | "lookbook" | "grid" | "footer" | null;
 
 const CONTAINER_STYLES: { key: ContainerStyle; label: string; hint: string }[] = [
-  { key: "minimal", label: "Minimalista", hint: "Bordas retas e discretas" },
+  { key: "minimal", label: "Minimalista", hint: "Bordas retas e sem sombra" },
   { key: "soft", label: "Suave", hint: "Cantos arredondados e sombra sutil" },
-  { key: "brutalist", label: "Brutalista", hint: "Bordas duras com sombra dura" },
+  { key: "brutalist", label: "Brutalista", hint: "Bordas duras com sombra preta" },
 ];
 
 const CATEGORY_STYLES: { key: CategoryStyle; label: string }[] = [
-  { key: "serif-italic", label: "Serifada Itálica" },
-  { key: "wide-sans", label: "Sans Espaçada" },
-  { key: "stamp", label: "Carimbo Mono" },
+  { key: "serif-italic", label: "Serifada Elegante" },
+  { key: "wide-sans", label: "Moderna Espaçada" },
+  { key: "stamp", label: "Carimbo Monospace" },
 ];
 
 async function fileToDataUrl(file: File): Promise<string> {
@@ -37,7 +37,7 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
   const products = useStore((s) => s.products);
 
   const zone =
-    "relative border-2 border-dashed border-transparent hover:border-[color:var(--gold)]/70 transition cursor-pointer";
+    "relative border-2 border-dashed border-transparent hover:border-[color:var(--gold)]/70 transition cursor-pointer group";
 
   const openEdit = (m: EditMode) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,14 +54,14 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
           </span>
           Live Preview — Editor Visual
         </span>
-        <span className="hidden sm:inline text-background/60">Toque em qualquer seção</span>
+        <span className="hidden sm:inline text-background/60">Toque nas seções para editar</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-md sm:max-w-2xl">
+      <div className="flex-1 overflow-y-auto pb-32">
+        <div className="mx-auto max-w-md sm:max-w-2xl bg-white min-h-full shadow-2xl">
           {settings.announcement && (
             <button onClick={openEdit("announce")} className={`${zone} block w-full text-left`}>
-              <EditBadge label="Anúncio" />
+              <EditBadge label="Editar Anúncio" />
               <div className="bg-foreground text-background text-center text-[10px] tracking-[0.25em] uppercase py-2 px-4 font-semibold">
                 {settings.announcement}
               </div>
@@ -69,22 +69,36 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
           )}
 
           <div onClick={openEdit("header")} className={zone}>
-            <EditBadge label="Cabeçalho" />
+            <EditBadge label="Editar Cabeçalho" />
             <div className="pointer-events-none">
               <Header />
             </div>
           </div>
 
           <div onClick={openEdit("hero")} className={zone}>
-            <EditBadge label="Hero" />
+            <EditBadge label="Editar Banner Hero" />
             <div className="pointer-events-none">
               <HeroLookbook />
             </div>
           </div>
 
-          <div onClick={openEdit("grid")} className={`${zone} p-4`}>
-            <EditBadge label="Grade" />
-            <div className="pointer-events-none grid grid-cols-2 gap-3">
+          <div onClick={openEdit("grid")} className={`${zone} p-4 sm:p-8 bg-neutral-50/50`}>
+            <EditBadge label="Editar Estilo da Grade" />
+            
+            {/* Título de Exemplo da Categoria */}
+            <div className="mb-6 flex items-center gap-4">
+              <h2 className={cn(
+                "text-xl md:text-2xl",
+                settings.categoryStyle === "serif-italic" && "font-serif italic tracking-wide",
+                settings.categoryStyle === "wide-sans" && "font-display uppercase tracking-[0.2em]",
+                settings.categoryStyle === "stamp" && "font-mono font-black uppercase tracking-widest border-2 border-black px-3 py-1 inline-block"
+              )}>
+                Exemplo de Categoria
+              </h2>
+              <div className="h-[1px] flex-1 bg-black/10"></div>
+            </div>
+
+            <div className="pointer-events-none grid grid-cols-2 gap-4 sm:gap-6">
               {products.slice(0, 4).map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -92,14 +106,14 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
           </div>
 
           <div onClick={openEdit("lookbook")} className={zone}>
-            <EditBadge label="Lookbook" />
+            <EditBadge label="Editar Lookbook Loop" />
             <div className="pointer-events-none">
               <LookbookLoop />
             </div>
           </div>
 
           <div onClick={openEdit("footer")} className={zone}>
-            <EditBadge label="Rodapé" />
+            <EditBadge label="Editar Rodapé" />
             <div className="pointer-events-none">
               <Footer />
             </div>
@@ -109,39 +123,40 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
 
       <button
         onClick={onExit}
-        className="fixed bottom-6 right-6 z-[60] group inline-flex items-center gap-2 rounded-full bg-foreground text-background pl-4 pr-5 py-3 text-xs uppercase tracking-[0.2em] font-semibold shadow-2xl hover:bg-[color:var(--gold)] hover:text-foreground transition"
+        className="fixed bottom-6 right-6 z-[60] group inline-flex items-center gap-2 rounded-full bg-foreground text-background pl-4 pr-5 py-3 text-xs uppercase tracking-[0.2em] font-semibold shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:bg-[color:var(--gold)] hover:text-foreground hover:scale-105 transition-all"
       >
         <Icon icon="ph:x-circle-duotone" className="w-5 h-5" />
         Sair do Editor
       </button>
 
+      {/* O SEGREDO DO LIVE PREVIEW: Fundo Transparente e Modal na Lateral! */}
       {editing && (
-        <div
-          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
-          onClick={() => setEditing(null)}
-        >
+        <div className="fixed inset-0 z-[70] pointer-events-none flex items-end sm:items-start sm:justify-end sm:p-6">
+          {/* Fundo clicável invisível */}
+          <div className="absolute inset-0 pointer-events-auto" onClick={() => setEditing(null)} />
+          
           <div
-            className="bg-white w-full max-w-lg sm:rounded-3xl rounded-t-3xl p-6 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-10"
+            className="bg-white/95 backdrop-blur-2xl w-full sm:w-[420px] pointer-events-auto sm:rounded-3xl rounded-t-3xl p-6 sm:p-8 shadow-[0_0_40px_rgba(0,0,0,0.15)] border border-black/10 max-h-[70vh] sm:max-h-[85vh] overflow-y-auto relative z-10 animate-in slide-in-from-bottom-10 sm:slide-in-from-right-10 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-12 h-1.5 bg-black/10 rounded-full mx-auto mb-5 sm:hidden" />
-            <div className="flex items-center justify-between mb-5">
+            <div className="w-12 h-1.5 bg-black/10 rounded-full mx-auto mb-6 sm:hidden" />
+            <div className="flex items-center justify-between mb-8">
               <h3 className="font-display text-xl flex items-center gap-2">
-                <Icon icon="ph:sliders-horizontal-duotone" className="text-[color:var(--gold)]" />
-                Editando: {sectionLabel(editing)}
+                <Icon icon="ph:magic-wand-duotone" className="text-[color:var(--gold)] w-6 h-6" />
+                {sectionLabel(editing)}
               </h3>
               <button
                 onClick={() => setEditing(null)}
-                className="p-2 rounded-full bg-black/5 text-foreground/60 hover:text-foreground"
+                className="p-2 rounded-full bg-black/5 text-foreground/60 hover:text-foreground hover:bg-black/10 transition"
               >
-                <Icon icon="ph:x" className="w-4 h-4" />
+                <Icon icon="ph:x-bold" className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {editing === "announce" && (
                 <TextField
-                  label="Texto do Anúncio"
+                  label="Texto do Anúncio (Faixa do Topo)"
                   value={settings.announcement}
                   onChange={(v) => store.setSettings({ announcement: v })}
                 />
@@ -174,6 +189,32 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                     value={settings.heroTitle}
                     onChange={(v) => store.setSettings({ heroTitle: v })}
                   />
+                  
+                  {/* NOVO: Escolha de cor do texto do Hero */}
+                  <div>
+                    <FieldLabel label="Cor do Texto (Contraste)" />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => store.setSettings({ heroTextColor: "light" } as any)}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-xl border border-black/15 text-[10px] font-bold uppercase tracking-widest transition",
+                          (settings as any).heroTextColor === "light" ? "bg-black text-white" : "bg-white text-black hover:bg-neutral-100"
+                        )}
+                      >
+                        Texto Claro
+                      </button>
+                      <button
+                        onClick={() => store.setSettings({ heroTextColor: "dark" } as any)}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-xl border border-black/15 text-[10px] font-bold uppercase tracking-widest transition",
+                          (settings as any).heroTextColor !== "light" ? "bg-white border-2 border-black text-black shadow-md" : "bg-white text-black hover:bg-neutral-100"
+                        )}
+                      >
+                        Texto Escuro
+                      </button>
+                    </div>
+                  </div>
+
                   <ImageField
                     label="Imagem de Fundo do Hero"
                     value={settings.heroImage}
@@ -189,64 +230,76 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                     value={settings.lookbookTitle}
                     onChange={(v) => store.setSettings({ lookbookTitle: v })}
                   />
-                  {[0, 1, 2].map((i) => (
-                    <ImageField
-                      key={i}
-                      label={`Frame ${i + 1}`}
-                      value={settings.lookbookImages[i] ?? ""}
-                      onChange={(v) => {
-                        const next = [...settings.lookbookImages];
-                        next[i] = v;
-                        store.setSettings({ lookbookImages: next });
-                      }}
-                    />
-                  ))}
+                  <div className="space-y-4 pt-2">
+                    <FieldLabel label="Fotos do Carrossel" />
+                    {[0, 1, 2].map((i) => (
+                      <ImageField
+                        key={i}
+                        label={`Frame ${i + 1}`}
+                        value={settings.lookbookImages[i] ?? ""}
+                        onChange={(v) => {
+                          const next = [...settings.lookbookImages];
+                          next[i] = v;
+                          store.setSettings({ lookbookImages: next });
+                        }}
+                      />
+                    ))}
+                  </div>
                 </>
               )}
 
               {editing === "grid" && (
                 <>
-                  <FieldLabel label="Estilo do Container do Produto" />
-                  <div className="grid gap-2">
-                    {CONTAINER_STYLES.map((c) => (
-                      <button
-                        key={c.key}
-                        onClick={() => store.setSettings({ containerStyle: c.key })}
-                        className={cn(
-                          "flex items-center justify-between rounded-xl border p-3 text-left transition",
-                          settings.containerStyle === c.key
-                            ? "border-foreground bg-foreground/5"
-                            : "border-black/10 hover:border-black/30",
-                        )}
-                      >
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wider">{c.label}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{c.hint}</p>
-                        </div>
-                        {settings.containerStyle === c.key && (
-                          <Icon icon="ph:check-circle-fill" className="w-5 h-5 text-[color:var(--gold)]" />
-                        )}
-                      </button>
-                    ))}
+                  <div>
+                    <FieldLabel label="Estilo do Container (Foto e Borda)" />
+                    <div className="grid gap-3">
+                      {CONTAINER_STYLES.map((c) => (
+                        <button
+                          key={c.key}
+                          onClick={() => store.setSettings({ containerStyle: c.key })}
+                          className={cn(
+                            "flex items-center justify-between rounded-2xl border-2 p-4 text-left transition-all",
+                            settings.containerStyle === c.key
+                              ? "border-[color:var(--gold)] bg-[#F9F6F0] shadow-md scale-[1.02]"
+                              : "border-transparent bg-neutral-50 hover:bg-neutral-100",
+                          )}
+                        >
+                          <div>
+                            <p className="text-[11px] font-black uppercase tracking-wider text-black">{c.label}</p>
+                            <p className="text-[9px] text-black/50 mt-1 uppercase tracking-widest">{c.hint}</p>
+                          </div>
+                          {settings.containerStyle === c.key && (
+                            <Icon icon="ph:check-circle-fill" className="w-5 h-5 text-[color:var(--gold)]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="pt-4">
-                    <FieldLabel label="Estilo do Título das Categorias" />
-                    <div className="grid gap-2">
+                  <div className="pt-4 border-t border-black/5">
+                    <FieldLabel label="Tipografia dos Títulos das Categorias" />
+                    <div className="grid gap-3">
                       {CATEGORY_STYLES.map((c) => (
                         <button
                           key={c.key}
                           onClick={() => store.setSettings({ categoryStyle: c.key })}
                           className={cn(
-                            "flex items-center justify-between rounded-xl border p-3 text-left transition",
+                            "flex items-center justify-between rounded-xl border p-4 text-left transition",
                             settings.categoryStyle === c.key
-                              ? "border-foreground bg-foreground/5"
-                              : "border-black/10 hover:border-black/30",
+                              ? "border-black bg-black text-white shadow-md"
+                              : "border-black/10 bg-white hover:border-black/30",
                           )}
                         >
-                          <span className="text-xs font-bold uppercase tracking-wider">{c.label}</span>
+                          <span className={cn(
+                            "text-sm",
+                            c.key === "serif-italic" && "font-serif italic",
+                            c.key === "wide-sans" && "font-display uppercase tracking-[0.2em] text-[11px]",
+                            c.key === "stamp" && "font-mono font-black uppercase tracking-widest text-[10px]"
+                          )}>
+                            {c.label}
+                          </span>
                           {settings.categoryStyle === c.key && (
-                            <Icon icon="ph:check-circle-fill" className="w-5 h-5 text-[color:var(--gold)]" />
+                            <Icon icon="ph:check-circle-fill" className="w-4 h-4 text-[color:var(--gold)]" />
                           )}
                         </button>
                       ))}
@@ -263,7 +316,7 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                     onChange={(v) => store.setSettings({ brandLine: v })}
                   />
                   <TextField
-                    label="Tagline"
+                    label="Tagline (Subtítulo)"
                     value={settings.footerTagline}
                     onChange={(v) => store.setSettings({ footerTagline: v })}
                   />
@@ -277,9 +330,9 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                     value={settings.whatsappNumber}
                     onChange={(v) => store.setSettings({ whatsappNumber: v })}
                   />
-                  <div>
-                    <FieldLabel label="Links Rápidos" />
-                    <div className="space-y-2">
+                  <div className="pt-4 border-t border-black/5">
+                    <FieldLabel label="Links Rápidos (Menus)" />
+                    <div className="space-y-3">
                       {settings.footerLinks.map((l, i) => (
                         <div key={i} className="flex gap-2">
                           <input
@@ -289,8 +342,8 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                               next[i] = { ...l, label: e.target.value };
                               store.setSettings({ footerLinks: next });
                             }}
-                            placeholder="Rótulo"
-                            className="flex-1 rounded-lg border border-black/15 p-2 text-xs outline-none"
+                            placeholder="Nome do Link"
+                            className="flex-1 rounded-xl border border-black/15 px-3 py-2.5 text-xs outline-none focus:border-black bg-neutral-50 focus:bg-white transition"
                           />
                           <input
                             value={l.href}
@@ -299,8 +352,8 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                               next[i] = { ...l, href: e.target.value };
                               store.setSettings({ footerLinks: next });
                             }}
-                            placeholder="URL"
-                            className="flex-1 rounded-lg border border-black/15 p-2 text-xs outline-none"
+                            placeholder="URL (#)"
+                            className="w-1/3 rounded-xl border border-black/15 px-3 py-2.5 text-xs outline-none focus:border-black bg-neutral-50 focus:bg-white transition"
                           />
                           <button
                             onClick={() =>
@@ -308,9 +361,9 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                                 footerLinks: settings.footerLinks.filter((_, j) => j !== i),
                               })
                             }
-                            className="rounded-lg border border-black/10 p-2 text-black/40 hover:text-red-600"
+                            className="rounded-xl border border-red-100 bg-red-50 p-2.5 text-red-600 hover:bg-red-600 hover:text-white transition"
                           >
-                            <Icon icon="ph:trash-bold" className="w-3.5 h-3.5" />
+                            <Icon icon="ph:trash-bold" className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
@@ -320,7 +373,7 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                             footerLinks: [...settings.footerLinks, { label: "Novo Link", href: "#" }],
                           })
                         }
-                        className="text-[10px] font-bold uppercase tracking-widest text-foreground/60 hover:text-foreground inline-flex items-center gap-1"
+                        className="w-full mt-2 rounded-xl border border-dashed border-black/20 py-3 text-[10px] font-bold uppercase tracking-widest text-black/50 hover:bg-black/5 hover:text-black transition inline-flex items-center justify-center gap-2"
                       >
                         <Icon icon="ph:plus-bold" className="w-3 h-3" /> Adicionar Link
                       </button>
@@ -332,9 +385,9 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
 
             <button
               onClick={() => setEditing(null)}
-              className="w-full mt-8 bg-foreground text-background text-[11px] font-bold uppercase tracking-[0.2em] py-4 rounded-xl hover:bg-[color:var(--gold)] hover:text-foreground transition"
+              className="w-full mt-8 bg-black text-white text-[11px] font-bold uppercase tracking-[0.2em] py-4 rounded-2xl hover:bg-[color:var(--gold)] shadow-xl hover:shadow-[0_0_20px_rgba(183,151,102,0.4)] transition-all"
             >
-              Concluir
+              Aplicar Mudanças
             </button>
           </div>
         </div>
@@ -345,8 +398,8 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
 
 function EditBadge({ label }: { label: string }) {
   return (
-    <div className="absolute top-2 right-2 z-10 bg-foreground text-background text-[9px] uppercase tracking-[0.2em] font-semibold px-2 py-1 rounded flex items-center gap-1 shadow-lg">
-      <Icon icon="ph:pencil-simple" className="w-3 h-3" />
+    <div className="absolute top-4 right-4 z-10 bg-black text-white text-[9px] uppercase tracking-[0.2em] font-bold px-3 py-1.5 rounded-md flex items-center gap-1.5 shadow-lg group-hover:bg-[color:var(--gold)] transition">
+      <Icon icon="ph:pencil-simple-bold" className="w-3 h-3" />
       {label}
     </div>
   );
@@ -354,18 +407,18 @@ function EditBadge({ label }: { label: string }) {
 
 function sectionLabel(m: Exclude<EditMode, null>) {
   return {
-    announce: "Anúncio",
+    announce: "Anúncio do Topo",
     header: "Cabeçalho",
-    hero: "Hero",
-    lookbook: "Lookbook",
-    grid: "Grade",
-    footer: "Rodapé",
+    hero: "Banner Principal",
+    lookbook: "Carrossel Lookbook",
+    grid: "Estilo do Catálogo",
+    footer: "Rodapé da Loja",
   }[m];
 }
 
 function FieldLabel({ label }: { label: string }) {
   return (
-    <label className="block text-[10px] uppercase tracking-[0.2em] font-semibold text-foreground/70 mb-2">
+    <label className="block text-[10px] uppercase tracking-[0.25em] font-bold text-black/50 mb-2">
       {label}
     </label>
   );
@@ -378,7 +431,7 @@ function TextField({ label, value, onChange }: { label: string; value: string; o
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-black/15 p-3.5 text-sm outline-none focus:border-foreground"
+        className="w-full rounded-xl border border-black/15 p-3.5 text-sm font-medium outline-none focus:border-black bg-neutral-50 focus:bg-white transition"
       />
     </div>
   );
@@ -388,33 +441,39 @@ function ImageField({ label, value, onChange }: { label: string; value: string; 
   return (
     <div>
       <FieldLabel label={label} />
-      <div className="flex gap-3 items-start">
-        <div className="h-20 w-20 shrink-0 rounded-xl border border-black/10 bg-neutral-50 overflow-hidden flex items-center justify-center">
+      <div className="flex gap-4 items-center">
+        <div className="h-24 w-24 shrink-0 rounded-2xl border-2 border-dashed border-black/15 bg-neutral-50 overflow-hidden flex items-center justify-center relative group cursor-pointer hover:border-black/40 transition">
           {value ? (
             <img src={value} alt="" className="h-full w-full object-cover" />
           ) : (
             <Icon icon="ph:image-duotone" className="w-6 h-6 text-black/30" />
           )}
+          
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition backdrop-blur-sm">
+            <Icon icon="ph:upload-simple-bold" className="w-6 h-6 text-white" />
+          </div>
+          
+          <input
+            type="file"
+            accept="image/*"
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (f) onChange(await fileToDataUrl(f));
+            }}
+          />
         </div>
         <div className="flex-1 space-y-2">
-          <label className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-black/15 px-3 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-black/5 transition">
-            <Icon icon="ph:cloud-arrow-up-duotone" className="w-4 h-4 text-[color:var(--gold)]" />
-            Upload
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (f) onChange(await fileToDataUrl(f));
-              }}
-            />
-          </label>
+          <p className="text-[10px] font-bold text-black/40 uppercase tracking-wider">URL da Imagem</p>
           <input
-            value={value.startsWith("data:") ? "" : value}
-            placeholder="ou cole uma URL"
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full rounded-lg border border-black/15 p-2 text-xs outline-none focus:border-foreground"
+            value={value.startsWith("data:") ? "Upload Local Selecionado" : value}
+            placeholder="Cole uma URL direta..."
+            onChange={(e) => {
+               if(!e.target.value.startsWith("Upload")) {
+                 onChange(e.target.value)
+               }
+            }}
+            className="w-full rounded-xl border border-black/15 p-3 text-xs outline-none focus:border-black bg-neutral-50 focus:bg-white transition"
           />
         </div>
       </div>
