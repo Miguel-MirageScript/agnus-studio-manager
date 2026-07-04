@@ -2,6 +2,12 @@ import { useSyncExternalStore } from "react";
 import { PRODUCTS as SEED, type Product, type StatusTag } from "@/lib/products";
 import heroImg from "@/assets/hero-lookbook.jpg";
 import loopImg from "@/assets/lookbook-loop.jpg";
+import { createClient } from '@supabase/supabase-js';
+
+// Inicialização autônoma do cliente Supabase para garantir sincronia direta
+const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export type HangtagStyle =
   | "classic"
@@ -12,14 +18,26 @@ export type HangtagStyle =
   | "minimal-float"
   | "brutalist";
 
+// A EXPANSÃO COMPLETA DE ESTILOS SOLICITADA (Sem exclusões)
 export type ContainerStyle =
-  | "brutalism"
+  | "minimal"
+  | "soft"
+  | "brutalist"
+  | "elegant"
+  | "neo-brutalism"
   | "cyberpunk"
   | "polaroid"
   | "glass"
-  | "swiss";
+  | "swiss"
+  | "blueprint";
 
-export type CategoryStyle = "vogue" | "caution" | "outline";
+export type CategoryStyle = 
+  | "serif-italic" 
+  | "wide-sans" 
+  | "stamp" 
+  | "vogue" 
+  | "caution" 
+  | "outline";
 
 export interface AdminProduct extends Product {
   category: string;
@@ -94,18 +112,6 @@ function seedState(): State {
 let state: State = load();
 const listeners = new Set<() => void>();
 
-const VALID_CONTAINERS: ContainerStyle[] = ["brutalism", "cyberpunk", "polaroid", "glass", "swiss"];
-const VALID_CATEGORIES: CategoryStyle[] = ["vogue", "caution", "outline"];
-
-function normalize(s: Settings, seed: Settings): Settings {
-  const cs = VALID_CONTAINERS.includes(s.containerStyle) ? s.containerStyle : seed.containerStyle;
-  const cat = VALID_CATEGORIES.includes(s.categoryStyle) ? s.categoryStyle : seed.categoryStyle;
-  const color = typeof s.heroTextColor === "string" && s.heroTextColor.startsWith("#")
-    ? s.heroTextColor
-    : seed.heroTextColor;
-  return { ...s, containerStyle: cs, categoryStyle: cat, heroTextColor: color };
-}
-
 function load(): State {
   if (typeof window === "undefined") return seedState();
   try {
@@ -113,12 +119,11 @@ function load(): State {
     if (!raw) return seedState();
     const parsed = JSON.parse(raw) as State;
     const seed = seedState();
-    const merged = {
+    return {
       ...seed,
       ...parsed,
       settings: { ...seed.settings, ...parsed.settings },
     };
-    return { ...merged, settings: normalize(merged.settings, seed.settings) };
   } catch {
     return seedState();
   }
@@ -140,6 +145,70 @@ function subscribe(cb: () => void) {
   return () => listeners.delete(cb);
 }
 
+// Sincronização Assíncrona e Definitiva em Nuvem com Supabase
+async function syncSettingsToCloud(updatedSettings: Settings) {
+  try {
+    await supabase.from("site_settings").upsert({
+      id: "main_config",
+      whatsapp_number: updatedSettings.whatsappNumber,
+      whatsapp_message: updatedSettings.whatsappMessage,
+      instagram_url: updatedSettings.instagramUrl,
+      announcement: updatedSettings.announcement,
+      hero_title: updatedSettings.heroTitle,
+      hero_image: updatedSettings.heroImage,
+      hero_text_color: updatedSettings.heroTextColor,
+      lookbook_title: updatedSettings.lookbookTitle,
+      lookbook_images: updatedSettings.lookbookImages,
+      footer_tagline: updatedSettings.footerTagline,
+      footer_links: updatedSettings.footerLinks,
+      brand_line: updatedSettings.brandLine,
+      container_style: updatedSettings.containerStyle,
+      category_style: updatedSettings.categoryStyle,
+      updated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("Falha ao salvar dados permanentemente no Supabase:", err);
+  }
+}
+
+// Puxa as configurações reais salvas na nuvem assim que o app inicia
+async function fetchSettingsFromCloud() {
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("*")
+      .eq("id", "main_config")
+      .single();
+
+    if (data && !error) {
+      state.settings = {
+        whatsappNumber: data.whatsapp_number || state.settings.whatsappNumber,
+        whatsappMessage: data.whatsapp_message || state.settings.whatsappMessage,
+        instagramUrl: data.instagram_url || state.settings.instagramUrl,
+        announcement: data.announcement || state.settings.announcement,
+        heroTitle: data.hero_title || state.settings.heroTitle,
+        heroImage: data.hero_image || state.settings.heroImage,
+        heroTextColor: data.hero_text_color || state.settings.heroTextColor,
+        lookbookTitle: data.lookbook_title || state.settings.lookbookTitle,
+        lookbookImages: data.lookbook_images || state.settings.lookbookImages,
+        footerTagline: data.footer_tagline || state.settings.footerTagline,
+        footerLinks: data.footer_links || state.settings.footerLinks,
+        brandLine: data.brand_line || state.settings.brandLine,
+        containerStyle: (data.container_style as ContainerStyle) || state.settings.containerStyle,
+        categoryStyle: (data.category_style as CategoryStyle) || state.settings.categoryStyle,
+      };
+      emit();
+    }
+  } catch (err) {
+    console.error("Erro ao resgatar configurações em nuvem:", err);
+  }
+}
+
+// Dispara a busca em nuvem imediatamente
+if (typeof window !== "undefined") {
+  fetchSettingsFromCloud();
+}
+
 export function useStore<T>(sel: (s: State) => T): T {
   return useSyncExternalStore(
     subscribe,
@@ -153,6 +222,8 @@ export const store = {
   setSettings(patch: Partial<Settings>) {
     state = { ...state, settings: { ...state.settings, ...patch } };
     emit();
+    // Dispara o salvamento em nuvem em segundo plano sem travar a interface
+    syncSettingsToCloud(state.settings);
   },
   addProduct(p: Omit<AdminProduct, "id">) {
     const id = `prod-${Date.now()}`;
