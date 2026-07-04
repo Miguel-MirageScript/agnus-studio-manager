@@ -5,15 +5,18 @@ import { HeroLookbook } from "@/components/public/HeroLookbook";
 import { ProductCard } from "@/components/public/ProductCard";
 import { Footer } from "@/components/public/Footer";
 import { LookbookLoop } from "@/components/public/LookbookLoop";
-import { store, useStore, type ContainerStyle, type CategoryStyle, type FooterLink } from "@/lib/store";
+import { store, useStore, type CategoryStyle, type FooterLink } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 type EditMode = "announce" | "header" | "hero" | "lookbook" | "grid" | "footer" | null;
 
-const CONTAINER_STYLES: { key: ContainerStyle; label: string; hint: string }[] = [
+const CONTAINER_STYLES: { key: string; label: string; hint: string }[] = [
   { key: "minimal", label: "Minimalista", hint: "Bordas retas e sem sombra" },
   { key: "soft", label: "Suave", hint: "Cantos arredondados e sombra sutil" },
   { key: "brutalist", label: "Brutalista", hint: "Bordas duras com sombra preta" },
+  { key: "polaroid", label: "Polaroid", hint: "Moldura fotográfica branca e grossa" },
+  { key: "glass", label: "Vidro (Glassmorphism)", hint: "Fundo translúcido com desfoque" },
+  { key: "elegant", label: "Elegante", hint: "Tons marfim com detalhes dourados" },
 ];
 
 const CATEGORY_STYLES: { key: CategoryStyle; label: string }[] = [
@@ -85,7 +88,6 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
           <div onClick={openEdit("grid")} className={`${zone} p-4 sm:p-8 bg-neutral-50/50`}>
             <EditBadge label="Editar Estilo da Grade" />
             
-            {/* Título de Exemplo da Categoria */}
             <div className="mb-6 flex items-center gap-4">
               <h2 className={cn(
                 "text-xl md:text-2xl",
@@ -129,10 +131,8 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
         Sair do Editor
       </button>
 
-      {/* O SEGREDO DO LIVE PREVIEW: Fundo Transparente e Modal na Lateral! */}
       {editing && (
         <div className="fixed inset-0 z-[70] pointer-events-none flex items-end sm:items-start sm:justify-end sm:p-6">
-          {/* Fundo clicável invisível */}
           <div className="absolute inset-0 pointer-events-auto" onClick={() => setEditing(null)} />
           
           <div
@@ -190,7 +190,6 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                     onChange={(v) => store.setSettings({ heroTitle: v })}
                   />
                   
-                  {/* NOVO: Escolha de cor do texto do Hero */}
                   <div>
                     <FieldLabel label="Cor do Texto (Contraste)" />
                     <div className="flex gap-2">
@@ -256,7 +255,7 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
                       {CONTAINER_STYLES.map((c) => (
                         <button
                           key={c.key}
-                          onClick={() => store.setSettings({ containerStyle: c.key })}
+                          onClick={() => store.setSettings({ containerStyle: c.key as any })}
                           className={cn(
                             "flex items-center justify-between rounded-2xl border-2 p-4 text-left transition-all",
                             settings.containerStyle === c.key
