@@ -442,6 +442,12 @@ function ProductEditor({
                   <span className="text-[10px]">Toque para selecionar da galeria</span>
                 </div>
               )}
+              
+              {/* O Segredo do Live Preview: A etiqueta aparece direto na foto principal! */}
+              {(preview || draft.tags.length > 0) && (
+                <Hangtag style={draft.hangtag} label={draft.tags[0] ?? "AGNUS.93"} />
+              )}
+              
               <input
                 type="file"
                 accept="image/*"
