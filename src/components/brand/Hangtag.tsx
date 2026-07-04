@@ -2,6 +2,18 @@ import { Icon } from "@iconify/react";
 import type { HangtagStyle } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
+/**
+ * 7 radically distinct hangtag styles. Each key preserves its identifier
+ * from the store for backwards compatibility, but the visual is redesigned.
+ *
+ * classic       → Leather patch with dashed stitching
+ * ribbon        → Wax seal (deep red circular)
+ * seal          → Holographic animated gradient sticker
+ * metallic      → Real barcode strip with SKU text
+ * side-label    → Kraft paper luggage tag with twine hole
+ * minimal-float → Neon glowing pill (cyberpunk)
+ * brutalist     → Yellow caution / duct tape strip, rotated
+ */
 export function Hangtag({
   style,
   label,
@@ -13,23 +25,19 @@ export function Hangtag({
 }) {
   if (!label) return null;
 
-  if (style === "ribbon") {
+  // 1. LEATHER PATCH (classic)
+  if (style === "classic") {
     return (
-      <div className={cn("absolute top-5 left-0 z-10", className)}>
-        <div className="flex items-center gap-2 bg-foreground/95 backdrop-blur-md text-background px-4 py-2 pr-5 text-[9px] font-bold tracking-[0.25em] uppercase shadow-lg border-y border-r border-white/10 rounded-r-sm">
-          <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--gold)] shadow-[0_0_6px_var(--gold)]" />
-          {label}
-        </div>
-      </div>
-    );
-  }
-
-  if (style === "seal") {
-    return (
-      <div className={cn("absolute top-4 right-4 z-10", className)}>
-        <div className="relative h-14 w-14 rounded-full bg-foreground text-background flex items-center justify-center shadow-xl border border-white/10 ring-1 ring-[color:var(--gold)]/80 ring-offset-2 ring-offset-transparent">
-          <Icon icon="ph:seal-check-duotone" className="absolute inset-0 m-auto w-8 h-8 text-[color:var(--gold)] opacity-20" />
-          <span className="text-[7px] font-black tracking-[0.2em] uppercase leading-tight text-center px-1 z-10">
+      <div className={cn("absolute bottom-4 left-4 z-10", className)}>
+        <div
+          className="relative px-4 py-2 rounded-md shadow-lg"
+          style={{
+            background: "linear-gradient(135deg, #6b3a1e 0%, #4a2612 100%)",
+            boxShadow: "inset 0 1px 2px rgba(255,220,180,0.25), 0 4px 10px rgba(0,0,0,0.35)",
+          }}
+        >
+          <span className="absolute inset-1 rounded-[3px] border border-dashed border-[#f4d9a8]/60 pointer-events-none" />
+          <span className="relative text-[9px] font-black tracking-[0.25em] uppercase text-[#f4d9a8]">
             {label}
           </span>
         </div>
@@ -37,38 +45,85 @@ export function Hangtag({
     );
   }
 
+  // 2. WAX SEAL (ribbon)
+  if (style === "ribbon") {
+    return (
+      <div className={cn("absolute top-4 right-4 z-10", className)}>
+        <div
+          className="relative h-16 w-16 rounded-full flex items-center justify-center text-center rotate-[-8deg]"
+          style={{
+            background: "radial-gradient(circle at 30% 25%, #c53030 0%, #7a0f0f 70%, #4a0505 100%)",
+            boxShadow: "inset -3px -4px 8px rgba(0,0,0,0.5), inset 3px 3px 6px rgba(255,120,120,0.3), 0 6px 14px rgba(0,0,0,0.35)",
+          }}
+        >
+          <span className="text-[7px] font-black tracking-[0.15em] uppercase text-[#f4d5a0] leading-tight px-1 drop-shadow">
+            {label}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. HOLOGRAPHIC STICKER (seal)
+  if (style === "seal") {
+    return (
+      <div className={cn("absolute top-4 left-4 z-10", className)}>
+        <div className="relative overflow-hidden bg-holo animate-holo rounded-full px-4 py-2 shadow-[0_4px_20px_rgba(255,0,204,0.35)] ring-2 ring-white/70">
+          <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/30 to-white/0 pointer-events-none" />
+          <span className="relative text-[9px] font-black tracking-[0.25em] uppercase text-white mix-blend-difference">
+            {label}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. BARCODE STRIP (metallic)
   if (style === "metallic") {
     return (
       <div className={cn("absolute bottom-4 right-4 z-10", className)}>
-        <div
-          className="relative overflow-hidden rounded-sm px-4 py-2 text-[9px] font-black tracking-[0.25em] uppercase text-black shadow-[0_4px_15px_rgba(183,151,102,0.3)] ring-1 ring-inset ring-white/40"
-          style={{
-            background: "linear-gradient(135deg, #F9F1D8 0%, #D4AF37 45%, #9E7A27 60%, #EADDAB 100%)",
-          }}
-        >
-          {/* Brilho interno simulando metal */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-50" />
-          <span className="relative z-10 drop-shadow-sm">{label}</span>
+        <div className="bg-white border border-black/20 px-2 py-1.5 rounded-sm shadow-md">
+          <div className="h-6 w-24 bg-barcode" />
+          <div className="mt-1 flex items-center justify-between font-mono text-[7px] tracking-[0.15em] uppercase text-black">
+            <span>AGN</span>
+            <span className="font-black truncate max-w-[70px]">{label}</span>
+            <span>93</span>
+          </div>
         </div>
       </div>
     );
   }
 
+  // 5. KRAFT PAPER LUGGAGE TAG (side-label)
   if (style === "side-label") {
     return (
-      <div className={cn("absolute top-1/2 right-0 z-10 -translate-y-1/2 flex items-center shadow-xl", className)}>
-        <div className="bg-white/95 backdrop-blur-sm text-foreground px-2.5 py-4 text-[9px] font-black tracking-[0.3em] uppercase [writing-mode:vertical-rl] rotate-180 border-y border-l border-black/10 rounded-l-md">
-          {label}
+      <div className={cn("absolute top-3 right-3 z-10 flex flex-col items-center", className)}>
+        <span className="block h-4 w-px bg-neutral-500" />
+        <div className="relative bg-kraft px-3 py-2 shadow-md border border-black/20"
+          style={{
+            clipPath: "polygon(50% 0, 100% 20%, 100% 100%, 0 100%, 0 20%)",
+          }}
+        >
+          <span className="absolute top-[3px] left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-neutral-900/70 border border-black/40" />
+          <p className="pt-2 text-[8px] font-black tracking-[0.2em] uppercase text-neutral-900">
+            {label}
+          </p>
         </div>
       </div>
     );
   }
 
+  // 6. NEON GLOW PILL (minimal-float)
   if (style === "minimal-float") {
     return (
-      <div className={cn("absolute top-5 left-5 z-10", className)}>
-        <div className="bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-black/5 shadow-sm flex items-center justify-center">
-          <span className="text-[8px] font-bold tracking-[0.3em] uppercase text-foreground/80 drop-shadow-sm">
+      <div className={cn("absolute top-4 left-4 z-10", className)}>
+        <div
+          className="bg-black/85 border border-fuchsia-400 rounded-full px-3.5 py-1.5"
+          style={{
+            boxShadow: "0 0 6px #f0f, 0 0 16px rgba(255,0,255,0.5), inset 0 0 6px rgba(255,0,255,0.3)",
+          }}
+        >
+          <span className="font-mono text-[9px] font-bold tracking-[0.3em] uppercase text-fuchsia-100 animate-neon">
             {label}
           </span>
         </div>
@@ -76,27 +131,16 @@ export function Hangtag({
     );
   }
 
-  if (style === "brutalist") {
-    return (
-      <div className={cn("absolute top-4 left-4 z-10", className)}>
-        <div className="bg-white border-2 border-black px-3 py-1.5 text-[10px] font-black tracking-[0.2em] uppercase text-black shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] transition-all cursor-default">
-          {label}
-        </div>
-      </div>
-    );
-  }
-
-  // classic — Etiqueta pendurada com fio realista
+  // 7. CAUTION TAPE (brutalist)
   return (
-    <div className={cn("absolute top-0 right-8 z-10 flex flex-col items-center drop-shadow-md", className)}>
-      <span className="block h-8 w-px bg-gradient-to-b from-transparent to-black/30" />
-      <div className="relative bg-[#F7F4EF] border border-black/10 px-4 py-2.5 shadow-lg rotate-[3deg] origin-top">
-        <span className="absolute -top-1 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full border border-black/20 bg-white shadow-inner" />
-        <p className="text-[8px] font-black tracking-[0.25em] uppercase text-foreground">{label}</p>
-        <div className="mt-1 h-[1px] w-full bg-black/5" />
-        <p className="mt-1 text-[7px] font-mono tracking-widest text-foreground/40 text-center">
-          .93
-        </p>
+    <div className={cn("absolute top-6 -left-2 z-10", className)}>
+      <div className="bg-hazard px-4 py-1.5 -rotate-6 shadow-lg border-y-2 border-black">
+        <div className="bg-yellow-300 px-2 py-0.5 border-2 border-black">
+          <span className="flex items-center gap-1 text-[10px] font-black tracking-[0.2em] uppercase text-black">
+            <Icon icon="ph:warning-fill" className="w-3 h-3" />
+            {label}
+          </span>
+        </div>
       </div>
     </div>
   );

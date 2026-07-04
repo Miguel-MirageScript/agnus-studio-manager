@@ -6,8 +6,8 @@ import { ProductCard } from "@/components/public/ProductCard";
 import { QuickFilters, type FilterKey } from "@/components/public/QuickFilters";
 import { LookbookLoop } from "@/components/public/LookbookLoop";
 import { Footer } from "@/components/public/Footer";
+import { CategoryHeading } from "@/components/public/CategoryHeading";
 import { useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -19,14 +19,13 @@ function HomePage() {
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);
   const announcement = useStore((s) => s.settings.announcement);
-  const categoryStyle = useStore((s) => s.settings.categoryStyle);
 
   const filtered = useMemo(
     () => (filter === "todos" ? products : products.filter((p) => p.filters.includes(filter as any))),
     [filter, products],
   );
 
-  // Efeito que recebe o link direto do WhatsApp e rola a tela até a camiseta!
+  // Deep-link do WhatsApp: rola até a peça e destaca com um "foco" dourado
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -36,21 +35,12 @@ function HomePage() {
       const el = document.getElementById(`p-${p}`);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Acende um "foco" dourado na peça para você saber exatamente qual o cliente quer
         el.classList.add("ring-4", "ring-[color:var(--gold)]", "ring-offset-4", "transition-all", "duration-500");
         setTimeout(() => el.classList.remove("ring-4", "ring-[color:var(--gold)]", "ring-offset-4"), 4000);
       }
     }, 400);
     return () => clearTimeout(t);
   }, [products]);
-
-  // Sincronização exata com o Painel Flutuante do Editor
-  const categoryClass = cn(
-    "text-foreground",
-    categoryStyle === "serif-italic" && "font-serif italic text-2xl md:text-3xl tracking-wide",
-    categoryStyle === "wide-sans" && "font-display uppercase text-xl md:text-2xl tracking-[0.2em]",
-    categoryStyle === "stamp" && "font-mono font-black uppercase text-sm md:text-base tracking-widest border-2 border-black px-4 py-1.5 inline-block",
-  );
 
   return (
     <div className="min-h-screen bg-background bg-grid">
@@ -76,7 +66,7 @@ function HomePage() {
             <section key={category} className="mx-auto w-full max-w-7xl px-5 md:px-8">
               <div className="mb-8 flex items-center gap-6">
                 <span className="hidden md:block h-px w-16 bg-[color:var(--gold)]" />
-                <h2 className={categoryClass}>{category}</h2>
+                <CategoryHeading name={category} />
                 <div className="h-[1px] flex-1 bg-black/10" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-black/40 whitespace-nowrap">
                   {String(categoryProducts.length).padStart(2, "0")} PEÇAS

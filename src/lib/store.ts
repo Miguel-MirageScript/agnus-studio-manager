@@ -12,8 +12,14 @@ export type HangtagStyle =
   | "minimal-float"
   | "brutalist";
 
-export type ContainerStyle = "minimal" | "soft" | "brutalist";
-export type CategoryStyle = "serif-italic" | "wide-sans" | "stamp";
+export type ContainerStyle =
+  | "brutalism"
+  | "cyberpunk"
+  | "polaroid"
+  | "glass"
+  | "swiss";
+
+export type CategoryStyle = "vogue" | "caution" | "outline";
 
 export interface AdminProduct extends Product {
   category: string;
@@ -33,6 +39,7 @@ export interface Settings {
   announcement: string;
   heroTitle: string;
   heroImage: string;
+  heroTextColor: string;
   lookbookTitle: string;
   lookbookImages: string[];
   footerTagline: string;
@@ -68,6 +75,7 @@ function seedState(): State {
       announcement: "FRETE GRÁTIS ACIMA DE R$ 350 — NOVO DROP.93",
       heroTitle: "LOOKBOOK.",
       heroImage: heroImg,
+      heroTextColor: "#0a0a0a",
       lookbookTitle: "Lookbook Loop",
       lookbookImages: [loopImg, loopImg, loopImg],
       footerTagline: "Luxury Streetwear",
@@ -77,14 +85,26 @@ function seedState(): State {
         { label: "FAQ", href: "#" },
       ],
       brandLine: "AGNUS.1993",
-      containerStyle: "soft",
-      categoryStyle: "wide-sans",
+      containerStyle: "swiss",
+      categoryStyle: "vogue",
     },
   };
 }
 
 let state: State = load();
 const listeners = new Set<() => void>();
+
+const VALID_CONTAINERS: ContainerStyle[] = ["brutalism", "cyberpunk", "polaroid", "glass", "swiss"];
+const VALID_CATEGORIES: CategoryStyle[] = ["vogue", "caution", "outline"];
+
+function normalize(s: Settings, seed: Settings): Settings {
+  const cs = VALID_CONTAINERS.includes(s.containerStyle) ? s.containerStyle : seed.containerStyle;
+  const cat = VALID_CATEGORIES.includes(s.categoryStyle) ? s.categoryStyle : seed.categoryStyle;
+  const color = typeof s.heroTextColor === "string" && s.heroTextColor.startsWith("#")
+    ? s.heroTextColor
+    : seed.heroTextColor;
+  return { ...s, containerStyle: cs, categoryStyle: cat, heroTextColor: color };
+}
 
 function load(): State {
   if (typeof window === "undefined") return seedState();
@@ -93,11 +113,12 @@ function load(): State {
     if (!raw) return seedState();
     const parsed = JSON.parse(raw) as State;
     const seed = seedState();
-    return {
+    const merged = {
       ...seed,
       ...parsed,
       settings: { ...seed.settings, ...parsed.settings },
     };
+    return { ...merged, settings: normalize(merged.settings, seed.settings) };
   } catch {
     return seedState();
   }
