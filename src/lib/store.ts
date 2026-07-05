@@ -9,35 +9,25 @@ const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// 20 HANGTAG STYLES
 export type HangtagStyle =
-  | "classic"
-  | "ribbon"
-  | "seal"
-  | "metallic"
-  | "side-label"
-  | "minimal-float"
-  | "brutalist";
+  | "classic" | "ribbon" | "seal" | "metallic" | "side-label" | "minimal-float" | "brutalist"
+  | "woven" | "blister" | "ticket" | "led" | "dogtag" | "pvc" | "acrylic"
+  | "wooden" | "care-label" | "rfid" | "holo-auth" | "velvet" | "wax-drip";
 
-// A EXPANSÃO COMPLETA DE ESTILOS SOLICITADA (Sem exclusões)
+// 20 PRODUCT CARD CONTAINERS
 export type ContainerStyle =
-  | "minimal"
-  | "soft"
-  | "brutalist"
-  | "elegant"
-  | "neo-brutalism"
-  | "cyberpunk"
-  | "polaroid"
-  | "glass"
-  | "swiss"
-  | "blueprint";
+  | "minimal" | "soft" | "brutalist" | "elegant" | "neo-brutalism"
+  | "cyberpunk" | "polaroid" | "glass" | "swiss" | "blueprint"
+  | "neumorphism" | "synthwave" | "high-fashion" | "grunge" | "y2k"
+  | "terminal" | "holographic" | "kraft" | "editorial" | "sci-fi";
 
-export type CategoryStyle = 
-  | "serif-italic" 
-  | "wide-sans" 
-  | "stamp" 
-  | "vogue" 
-  | "caution" 
-  | "outline";
+// 20 CATEGORY TYPOGRAPHY STYLES
+export type CategoryStyle =
+  | "serif-italic" | "wide-sans" | "stamp" | "vogue" | "caution" | "outline"
+  | "neon-sign" | "extruded-3d" | "glitch" | "marker" | "arcade-pixel"
+  | "gold-foil" | "ransom" | "marquee" | "blur-reveal" | "cyber-tech"
+  | "stencil" | "bubblegum" | "blackletter" | "vertical" | "tape-emboss";
 
 export interface AdminProduct extends Product {
   category: string;
@@ -145,10 +135,29 @@ function subscribe(cb: () => void) {
   return () => listeners.delete(cb);
 }
 
-// Sincronização Assíncrona e Definitiva em Nuvem com Supabase
+// ---------- Cloud save state ----------
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+let saveStatus: SaveStatus = "idle";
+const saveListeners = new Set<() => void>();
+function emitSave() {
+  saveListeners.forEach((l) => l());
+}
+export function useSaveStatus(): SaveStatus {
+  return useSyncExternalStore(
+    (cb) => {
+      saveListeners.add(cb);
+      return () => saveListeners.delete(cb);
+    },
+    () => saveStatus,
+    () => saveStatus,
+  );
+}
+
 async function syncSettingsToCloud(updatedSettings: Settings) {
+  saveStatus = "saving";
+  emitSave();
   try {
-    await supabase.from("site_settings").upsert({
+    const { error } = await supabase.from("site_settings").upsert({
       id: "main_config",
       whatsapp_number: updatedSettings.whatsappNumber,
       whatsapp_message: updatedSettings.whatsappMessage,
@@ -164,11 +173,27 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
       brand_line: updatedSettings.brandLine,
       container_style: updatedSettings.containerStyle,
       category_style: updatedSettings.categoryStyle,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     });
+    if (error) throw error;
+    saveStatus = "saved";
+    emitSave();
+    setTimeout(() => {
+      if (saveStatus === "saved") {
+        saveStatus = "idle";
+        emitSave();
+      }
+    }, 2200);
   } catch (err) {
-    console.error("Falha ao salvar dados permanentemente no Supabase:", err);
+    console.error("Falha ao salvar no Supabase:", err);
+    saveStatus = "error";
+    emitSave();
+    throw err;
   }
+}
+
+export async function saveSettingsNow() {
+  return syncSettingsToCloud(state.settings);
 }
 
 // Puxa as configurações reais salvas na nuvem assim que o app inicia

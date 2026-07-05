@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useEffect, useMemo, useState } from "react";
-import { useStore, store, type FooterLink } from "@/lib/store";
+import { useStore, store, saveSettingsNow, type FooterLink } from "@/lib/store";
+import { SaveCloudButton } from "./SaveCloudButton";
 
 export function SettingsPanel() {
   const settings = useStore((s) => s.settings);
@@ -17,8 +18,13 @@ export function SettingsPanel() {
     [draft, settings],
   );
 
-  const save = () => {
+  const save = async () => {
     store.setSettings(draft);
+    try {
+      await saveSettingsNow();
+    } catch {
+      /* handled via status */
+    }
   };
 
   const reset = () => setDraft(settings);
@@ -158,8 +164,9 @@ export function SettingsPanel() {
           className="rounded-xl bg-foreground text-background px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--gold)] hover:text-foreground transition disabled:opacity-30 disabled:hover:bg-foreground disabled:hover:text-background shadow-lg flex items-center gap-2"
         >
           <Icon icon="ph:floppy-disk-duotone" className="w-4 h-4" />
-          Salvar Modificações
+          Aplicar
         </button>
+        <SaveCloudButton label="Salvar na Nuvem" />
       </div>
     </div>
   );
