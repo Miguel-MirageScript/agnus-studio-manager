@@ -133,6 +133,10 @@
   0%,100% { transform: rotate(-4deg); }
   50% { transform: rotate(-2deg); }
 }
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
 
 @utility animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
 @utility animate-float-soft { animation: float-soft 3s ease-in-out infinite; }
