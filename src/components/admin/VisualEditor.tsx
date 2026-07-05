@@ -14,6 +14,7 @@ import { HeroEditor } from "./editor/HeroEditor";
 import { LookbookEditor } from "./editor/LookbookEditor";
 import { GridEditor } from "./editor/GridEditor";
 import { FooterEditor } from "./editor/FooterEditor";
+import { SaveCloudButton } from "./SaveCloudButton";
 
 type EditMode = "announce" | "header" | "hero" | "lookbook" | "grid" | "footer" | null;
 
