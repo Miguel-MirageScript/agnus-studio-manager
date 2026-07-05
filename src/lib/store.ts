@@ -135,10 +135,29 @@ function subscribe(cb: () => void) {
   return () => listeners.delete(cb);
 }
 
-// Sincronização Assíncrona e Definitiva em Nuvem com Supabase
+// ---------- Cloud save state ----------
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+let saveStatus: SaveStatus = "idle";
+const saveListeners = new Set<() => void>();
+function emitSave() {
+  saveListeners.forEach((l) => l());
+}
+export function useSaveStatus(): SaveStatus {
+  return useSyncExternalStore(
+    (cb) => {
+      saveListeners.add(cb);
+      return () => saveListeners.delete(cb);
+    },
+    () => saveStatus,
+    () => saveStatus,
+  );
+}
+
 async function syncSettingsToCloud(updatedSettings: Settings) {
+  saveStatus = "saving";
+  emitSave();
   try {
-    await supabase.from("site_settings").upsert({
+    const { error } = await supabase.from("site_settings").upsert({
       id: "main_config",
       whatsapp_number: updatedSettings.whatsappNumber,
       whatsapp_message: updatedSettings.whatsappMessage,
@@ -154,11 +173,27 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
       brand_line: updatedSettings.brandLine,
       container_style: updatedSettings.containerStyle,
       category_style: updatedSettings.categoryStyle,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     });
+    if (error) throw error;
+    saveStatus = "saved";
+    emitSave();
+    setTimeout(() => {
+      if (saveStatus === "saved") {
+        saveStatus = "idle";
+        emitSave();
+      }
+    }, 2200);
   } catch (err) {
-    console.error("Falha ao salvar dados permanentemente no Supabase:", err);
+    console.error("Falha ao salvar no Supabase:", err);
+    saveStatus = "error";
+    emitSave();
+    throw err;
   }
+}
+
+export async function saveSettingsNow() {
+  return syncSettingsToCloud(state.settings);
 }
 
 // Puxa as configurações reais salvas na nuvem assim que o app inicia
