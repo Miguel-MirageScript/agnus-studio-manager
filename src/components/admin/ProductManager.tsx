@@ -96,14 +96,17 @@ export function ProductManager() {
             Arraste em qualquer direção para organizar seu catálogo.
           </p>
         </div>
-        <button
-          disabled={loading}
-          onClick={() => setEditing(emptyDraft(categories[0] ?? "Camisetas"))}
-          className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--gold)] hover:text-foreground transition disabled:opacity-50 shadow-md"
-        >
-          <Icon icon="ph:plus-bold" className="w-4 h-4" />
-          Novo Produto
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <SaveCloudButton label="Salvar Mudanças" />
+          <button
+            disabled={loading}
+            onClick={() => setEditing(emptyDraft(categories[0] ?? "Camisetas"))}
+            className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--gold)] hover:text-foreground transition disabled:opacity-50 shadow-md"
+          >
+            <Icon icon="ph:plus-bold" className="w-4 h-4" />
+            Novo Produto
+          </button>
+        </div>
       </header>
 
       <CategoryManager />
