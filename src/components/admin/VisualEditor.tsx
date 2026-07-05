@@ -50,8 +50,9 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
           </span>
           Live Preview — Editor Visual
         </span>
-        <span className="hidden sm:inline text-background/60">
+        <span className="hidden sm:flex items-center gap-3 text-background/60">
           Toque nas seções para editar
+          <SaveCloudButton label="Salvar Mudanças" compact />
         </span>
       </div>
 
