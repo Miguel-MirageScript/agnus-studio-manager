@@ -18,8 +18,13 @@ export function SettingsPanel() {
     [draft, settings],
   );
 
-  const save = () => {
+  const save = async () => {
     store.setSettings(draft);
+    try {
+      await saveSettingsNow();
+    } catch {
+      /* handled via status */
+    }
   };
 
   const reset = () => setDraft(settings);
