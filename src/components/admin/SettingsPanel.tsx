@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { useEffect, useMemo, useState } from "react";
-import { useStore, store, saveSettingsNow, useSaveStatus, type FooterLink } from "@/lib/store";
+import { useStore, store, saveSettingsNow, type FooterLink } from "@/lib/store";
 import { SaveCloudButton } from "./SaveCloudButton";
 
 export function SettingsPanel() {
