@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import type { AdminSection } from "@/components/admin/AdminSidebar";
+import { SaveCloudButton } from "./SaveCloudButton";
 
 export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
   const products = useStore((s) => s.products);
