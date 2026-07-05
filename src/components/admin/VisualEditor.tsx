@@ -164,12 +164,15 @@ function EditorDrawer({
           {mode === "footer" && <FooterEditor />}
         </div>
 
-        <button
-          onClick={onClose}
-          className="w-full mt-8 bg-black text-white text-[11px] font-bold uppercase tracking-[0.2em] py-4 rounded-2xl hover:bg-[color:var(--gold)] shadow-xl hover:shadow-[0_0_20px_rgba(183,151,102,0.4)] transition-all"
-        >
-          Aplicar Mudanças
-        </button>
+        <div className="flex gap-2 mt-8">
+          <SaveCloudButton label="Salvar Mudanças" className="flex-1 justify-center py-4 rounded-2xl" />
+          <button
+            onClick={onClose}
+            className="px-4 bg-black text-white text-[11px] font-bold uppercase tracking-[0.2em] py-4 rounded-2xl hover:bg-[color:var(--gold)] transition-all"
+          >
+            Fechar
+          </button>
+        </div>
       </div>
     </div>
   );
