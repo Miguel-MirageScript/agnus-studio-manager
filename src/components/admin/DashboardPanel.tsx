@@ -53,14 +53,17 @@ export function DashboardPanel({ onNavigate }: { onNavigate: (s: AdminSection) =
 
   return (
     <div className="space-y-8 pb-20">
-      <header>
-        <p className="text-[10px] uppercase tracking-[0.3em] text-[color:var(--gold)] font-semibold">
-          Visão Geral
-        </p>
-        <h1 className="font-display text-3xl md:text-4xl mt-1">Central de Produtividade</h1>
-        <p className="text-sm text-muted-foreground mt-2 max-w-xl">
-          Métricas do catálogo em tempo real, com atalhos para as operações mais frequentes.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[color:var(--gold)] font-semibold">
+            Visão Geral
+          </p>
+          <h1 className="font-display text-3xl md:text-4xl mt-1">Central de Produtividade</h1>
+          <p className="text-sm text-muted-foreground mt-2 max-w-xl">
+            Métricas do catálogo em tempo real, com atalhos para as operações mais frequentes.
+          </p>
+        </div>
+        <SaveCloudButton label="Salvar Mudanças" />
       </header>
 
       {/* Cards de Métricas Rápidas */}
