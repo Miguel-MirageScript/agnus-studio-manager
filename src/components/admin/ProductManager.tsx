@@ -14,6 +14,7 @@ import { uploadToSupabase, deleteFromSupabase } from "@/lib/supabase-storage";
 import { CategoryManager } from "./products/CategoryManager";
 import { SortableProductCard } from "./products/SortableProductCard";
 import { ProductEditor, emptyDraft, type Draft } from "./products/ProductEditor";
+import { SaveCloudButton } from "./SaveCloudButton";
 
 export function ProductManager() {
   const products = useStore((s) => s.products);
