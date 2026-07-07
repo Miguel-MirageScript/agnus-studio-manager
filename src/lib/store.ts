@@ -61,6 +61,7 @@ interface State {
   products: AdminProduct[];
   categories: string[];
   settings: Settings;
+  isLoaded: boolean; // <--- Controle de Tela de Carregamento
 }
 
 const KEY = "agnus_admin_store_v1";
@@ -96,6 +97,7 @@ function seedState(): State {
       containerStyle: "swiss",
       categoryStyle: "vogue",
     },
+    isLoaded: false, // <--- Inicia escondendo o site
   };
 }
 
@@ -113,6 +115,7 @@ function load(): State {
       ...seed,
       ...parsed,
       settings: { ...seed.settings, ...parsed.settings },
+      isLoaded: false, // Força a tela de load em toda atualização pesada
     };
   } catch {
     return seedState();
@@ -222,10 +225,13 @@ async function fetchSettingsFromCloud() {
         containerStyle: (data.container_style as ContainerStyle) || state.settings.containerStyle,
         categoryStyle: (data.category_style as CategoryStyle) || state.settings.categoryStyle,
       };
-      emit();
     }
   } catch (err) {
     console.error("Erro ao resgatar configurações em nuvem:", err);
+  } finally {
+    // Independentemente de erro ou sucesso, libera a tela de carregamento!
+    state.isLoaded = true;
+    emit();
   }
 }
 
