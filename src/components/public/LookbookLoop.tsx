@@ -33,15 +33,6 @@ export function LookbookLoop() {
               </div>
             ))}
           </div>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-3 rounded-full bg-white/70 backdrop-blur px-5 py-2">
-              <span className="font-display tracking-widest text-lg">AGNUS</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow">
-                <Icon icon="ph:play-fill" className="w-4 h-4 text-foreground" />
-              </span>
-              <span className="font-display tracking-widest text-lg">LOOP.93</span>
-            </div>
-          </div>
         </div>
         <div className="mt-3 flex items-center justify-between">
           <div className="flex-1 mx-4 h-1 rounded-full bg-black/5 overflow-hidden">
