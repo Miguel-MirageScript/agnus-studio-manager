@@ -19,6 +19,9 @@ function HomePage() {
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);
   const announcement = useStore((s) => s.settings.announcement);
+  
+  // 1. Lendo o sinal de carregamento da nuvem (Supabase)
+  const isLoaded = useStore((s) => s.isLoaded);
 
   const filtered = useMemo(
     () => (filter === "todos" ? products : products.filter((p) => p.filters.includes(filter as any))),
@@ -42,8 +45,33 @@ function HomePage() {
     return () => clearTimeout(t);
   }, [products]);
 
+  // =============== TELA DE CARREGAMENTO ANIMADA E LUXUOSA ===============
+  if (!isLoaded) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#FDFBF7] flex flex-col items-center justify-center transition-opacity duration-1000">
+        <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in-95 duration-1000 ease-out">
+          
+          {/* Tipografia refinada A G N U S .¹⁹⁹³ */}
+          <h1 className="font-display text-2xl md:text-4xl tracking-[0.4em] text-foreground flex items-start drop-shadow-sm">
+            A G N U S .
+            <sup className="text-[10px] md:text-sm text-[color:var(--gold)] mt-2 md:mt-3 ml-1 font-black tracking-widest">
+              1993
+            </sup>
+          </h1>
+          
+          {/* Linha de progresso dourada elegante e pulsante */}
+          <div className="relative h-[2px] w-32 overflow-hidden bg-black/5 rounded-full">
+            <div className="absolute inset-y-0 left-0 w-full bg-[color:var(--gold)] animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
+          </div>
+          
+        </div>
+      </div>
+    );
+  }
+  // ========================================================================
+
   return (
-    <div className="min-h-screen bg-background bg-grid">
+    <div className="min-h-screen bg-background bg-grid animate-in fade-in duration-1000">
       {announcement && (
         <div className="bg-foreground text-background text-center text-[10px] tracking-[0.25em] uppercase py-2.5 px-4 font-bold shadow-md relative z-20">
           {announcement}
