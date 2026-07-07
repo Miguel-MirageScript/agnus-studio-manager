@@ -4,9 +4,9 @@ import heroImg from "@/assets/hero-lookbook.jpg";
 import loopImg from "@/assets/lookbook-loop.jpg";
 import { createClient } from '@supabase/supabase-js';
 
-// Inicialização autônoma do cliente Supabase para garantir sincronia direta
-const supabaseUrl = "https://jypmxfhaxcniztkswueb.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
+// A MÁGICA ESTÁ AQUI: Usando as chaves reais e automáticas do seu projeto!
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 20 HANGTAG STYLES
@@ -61,7 +61,7 @@ interface State {
   products: AdminProduct[];
   categories: string[];
   settings: Settings;
-  isLoaded: boolean; // <--- Controle de Tela de Carregamento
+  isLoaded: boolean;
 }
 
 const KEY = "agnus_admin_store_v1";
@@ -97,7 +97,7 @@ function seedState(): State {
       containerStyle: "swiss",
       categoryStyle: "vogue",
     },
-    isLoaded: false, // <--- Inicia escondendo o site
+    isLoaded: false,
   };
 }
 
@@ -115,7 +115,7 @@ function load(): State {
       ...seed,
       ...parsed,
       settings: { ...seed.settings, ...parsed.settings },
-      isLoaded: false, // Força a tela de load em toda atualização pesada
+      isLoaded: false,
     };
   } catch {
     return seedState();
@@ -157,6 +157,7 @@ export function useSaveStatus(): SaveStatus {
 }
 
 async function syncSettingsToCloud(updatedSettings: Settings) {
+  if (!supabaseUrl) return; // Trava de segurança caso falte a chave
   saveStatus = "saving";
   emitSave();
   try {
@@ -191,7 +192,6 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
     console.error("Falha ao salvar no Supabase:", err);
     saveStatus = "error";
     emitSave();
-    throw err;
   }
 }
 
@@ -201,6 +201,12 @@ export async function saveSettingsNow() {
 
 // Puxa as configurações reais salvas na nuvem assim que o app inicia
 async function fetchSettingsFromCloud() {
+  if (!supabaseUrl) {
+    state = { ...state, isLoaded: true };
+    emit();
+    return;
+  }
+  
   try {
     const { data, error } = await supabase
       .from("site_settings")
@@ -209,7 +215,8 @@ async function fetchSettingsFromCloud() {
       .single();
 
     if (data && !error) {
-      state.settings = {
+      // Atualiza o estado mesclando os dados da nuvem com extrema segurança
+      const cloudSettings = {
         whatsappNumber: data.whatsapp_number || state.settings.whatsappNumber,
         whatsappMessage: data.whatsapp_message || state.settings.whatsappMessage,
         instagramUrl: data.instagram_url || state.settings.instagramUrl,
@@ -218,19 +225,22 @@ async function fetchSettingsFromCloud() {
         heroImage: data.hero_image || state.settings.heroImage,
         heroTextColor: data.hero_text_color || state.settings.heroTextColor,
         lookbookTitle: data.lookbook_title || state.settings.lookbookTitle,
-        lookbookImages: data.lookbook_images || state.settings.lookbookImages,
+        lookbookImages: data.lookbook_images && data.lookbook_images.length > 0 ? data.lookbook_images : state.settings.lookbookImages,
         footerTagline: data.footer_tagline || state.settings.footerTagline,
         footerLinks: data.footer_links || state.settings.footerLinks,
         brandLine: data.brand_line || state.settings.brandLine,
         containerStyle: (data.container_style as ContainerStyle) || state.settings.containerStyle,
         categoryStyle: (data.category_style as CategoryStyle) || state.settings.categoryStyle,
       };
+      
+      state = { ...state, settings: cloudSettings, isLoaded: true };
+    } else {
+      state = { ...state, isLoaded: true };
     }
   } catch (err) {
     console.error("Erro ao resgatar configurações em nuvem:", err);
+    state = { ...state, isLoaded: true };
   } finally {
-    // Independentemente de erro ou sucesso, libera a tela de carregamento!
-    state.isLoaded = true;
     emit();
   }
 }
