@@ -15,6 +15,8 @@ export interface Product {
   name: string;
   price: number;
   image: string;
+  /** Imagem opcional das costas / detalhe de arte. */
+  backImage?: string;
   tags: StatusTag[];
   filters: ("novidades" | "mais-vendidos" | "pronta-entrega" | "limitados")[];
 }
@@ -25,6 +27,7 @@ export const PRODUCTS: Product[] = [
     name: "AGNUS OVERSIZED TEE",
     price: 28,
     image: teeBlack,
+    backImage: teeWhite,
     tags: ["PRONTA ENTREGA"],
     filters: ["pronta-entrega", "mais-vendidos"],
   },
@@ -33,6 +36,7 @@ export const PRODUCTS: Product[] = [
     name: "AGNUS OVERSIZED TEE",
     price: 29,
     image: teeWhite,
+    backImage: teeCream,
     tags: ["SOB ENCOMENDA"],
     filters: ["mais-vendidos"],
   },
@@ -65,6 +69,7 @@ export const PRODUCTS: Product[] = [
     name: "AGNUS LIMITED DROP",
     price: 32,
     image: teeCream,
+    backImage: teeBlack,
     tags: ["LIMITADO", "PRONTA ENTREGA"],
     filters: ["limitados", "pronta-entrega", "novidades"],
   },
