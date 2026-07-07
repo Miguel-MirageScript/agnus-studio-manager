@@ -44,7 +44,7 @@ export interface AdminProduct extends Product {
   category: string;
   stock: number;
   hangtag?: HangtagStyle;
-  backImage?: string; // Adicionado suporte para a segunda foto traseira
+  backImage?: string; // Suporte para a segunda imagem que você pediu
 }
 
 export interface FooterLink {
@@ -90,7 +90,7 @@ function coerceTheme(raw: unknown): ThemeKey {
   return DEFAULT_THEME;
 }
 
-// O novo Reset de Fábrica limpo. Sem os produtos fantasmas.
+// O novo Reset de Fábrica limpo. Sem os produtos fantasmas antigos.
 function seedState(): State {
   return {
     products: [], 
@@ -169,6 +169,10 @@ function emitSave() {
   saveListeners.forEach((l) => l());
 }
 
+// ---------------------------------------------------------
+// EXPORTAÇÕES EXIGIDAS PELO BUILD (Isso impede o erro que você viu)
+// ---------------------------------------------------------
+
 export function useSaveStatus(): SaveStatus {
   return useSyncExternalStore(
     (cb) => {
@@ -228,6 +232,16 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
 export async function saveSettingsNow() {
   return syncSettingsToCloud(state.settings);
 }
+
+export function whatsappHref(productName: string, productId?: string, s: Settings = state.settings) {
+  const link = productId ? productLink(productId) : (typeof window !== "undefined" ? window.location.origin : "");
+  const msg = s.whatsappMessage
+    .replace(/\{product\}/g, productName)
+    .replace(/\{link\}/g, link);
+  return `https://wa.me/${s.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+}
+
+// ---------------------------------------------------------
 
 async function fetchSettingsFromCloud() {
   if (safeUrl === "https://placeholder.supabase.co") {
@@ -316,7 +330,7 @@ export const store = {
     state = { 
       ...state, 
       categories: state.categories.filter((c) => c !== name),
-      products: state.products.filter((p) => p.category !== name) 
+      products: state.products.filter((p) => p.category !== name) // Apaga os produtos órfãos em cascata
     };
     emit();
   },
@@ -337,14 +351,6 @@ export const store = {
 export function productLink(productId: string) {
   if (typeof window === "undefined") return `/?p=${productId}`;
   return `${window.location.origin}/?p=${productId}`;
-}
-
-export function whatsappHref(productName: string, productId?: string, s: Settings = state.settings) {
-  const link = productId ? productLink(productId) : (typeof window !== "undefined" ? window.location.origin : "");
-  const msg = s.whatsappMessage
-    .replace(/\{product\}/g, productName)
-    .replace(/\{link\}/g, link);
-  return `https://wa.me/${s.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
 }
 
 export type { Product, StatusTag };
