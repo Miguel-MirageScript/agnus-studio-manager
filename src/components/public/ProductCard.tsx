@@ -51,8 +51,8 @@ export function ProductCard({ product }: { product: AdminProduct }) {
           loading="lazy"
           className={cn(
             "h-full w-full object-cover transition-all duration-500 group-hover:scale-105 animate-in fade-in",
-            current.includes(".png") && "p-6 object-contain mix-blend-multiply",
-            v.imgClass,
+            // Removido o mix-blend-multiply e filtros de tema para garantir que a foto original apareça 100% nítida
+            current.includes(".png") ? "p-6 object-contain" : ""
           )}
         />
         <Hangtag label={primaryTag} theme={theme} />
