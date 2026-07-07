@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { PRODUCTS as SEED, type Product, type StatusTag } from "@/lib/products";
+import { type Product, type StatusTag } from "@/lib/products";
 import heroImg from "@/assets/hero-lookbook.jpg";
 import loopImg from "@/assets/lookbook-loop.jpg";
 import { createClient } from '@supabase/supabase-js';
@@ -8,12 +8,12 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = "https://jypmxfhaxcniztkswueb.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
 
-// Proteção anti-crash (impede o erro que viu no ecrã)
+// Proteção anti-crash
 const safeUrl = SUPABASE_URL.startsWith("http") ? SUPABASE_URL : "https://placeholder.supabase.co";
 const safeKey = SUPABASE_ANON_KEY.length > 10 ? SUPABASE_ANON_KEY : "placeholder_key";
 const supabase = createClient(safeUrl, safeKey);
 
-// 20 TEMAS UNIFICADOS — controlam Container, Categoria e Etiqueta ao mesmo tempo.
+// 20 TEMAS UNIFICADOS
 export type ThemeKey =
   | "minimalist-luxury"
   | "neo-brutalism"
@@ -36,7 +36,6 @@ export type ThemeKey =
   | "dark-elegance"
   | "vaporwave";
 
-// Aliases legados para não quebrar código existente que ainda importe estes tipos.
 export type ContainerStyle = ThemeKey;
 export type CategoryStyle = ThemeKey;
 export type HangtagStyle = ThemeKey;
@@ -44,7 +43,6 @@ export type HangtagStyle = ThemeKey;
 export interface AdminProduct extends Product {
   category: string;
   stock: number;
-  /** Mantido por compatibilidade — a etiqueta é gerada pelo tema global. */
   hangtag?: HangtagStyle;
 }
 
@@ -66,7 +64,6 @@ export interface Settings {
   footerTagline: string;
   footerLinks: FooterLink[];
   brandLine: string;
-  /** Tema global unificado (container + categoria + hangtag). */
   theme: ThemeKey;
 }
 
@@ -92,15 +89,11 @@ function coerceTheme(raw: unknown): ThemeKey {
   return DEFAULT_THEME;
 }
 
+// AQUI ESTÁ A MÁGICA: O novo Reset de Fábrica limpo.
 function seedState(): State {
-  const products: AdminProduct[] = SEED.map((p, i) => ({
-    ...p,
-    category: i % 2 === 0 ? "Camisetas" : "Edições Limitadas",
-    stock: p.tags.includes("ESGOTADO") ? 0 : 12,
-  }));
   return {
-    products,
-    categories: ["Camisetas", "Edições Limitadas", "Acessórios"],
+    products: [], // Inicia completamente vazio. Sem fantasmas genéricos.
+    categories: ["ORIGINAL A G N U S .¹⁹⁹³"], // Inicia apenas com a sua categoria principal.
     settings: {
       whatsappNumber: "5511932212697",
       whatsappMessage:
@@ -195,8 +188,6 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
   saveStatus = "saving";
   emitSave();
   try {
-    // Escreve o tema em `container_style` e `category_style` (colunas existentes) para
-    // preservar retrocompatibilidade sem exigir alteração de schema.
     const { error } = await supabase.from("site_settings").upsert({
       id: "main_config",
       whatsapp_number: updatedSettings.whatsappNumber,
