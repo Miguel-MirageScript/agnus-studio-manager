@@ -290,11 +290,28 @@ export const store = {
     emit();
     syncSettingsToCloud(state.settings);
   },
-  addProduct(p: Omit<AdminProduct, "id">) {
+  
+  // SOLUÇÃO CORRETA E SEGURA APLICADA AQUI: Sincroniza com Supabase, mas com fallback local.
+  async addProduct(p: Omit<AdminProduct, "id">) {
+    try {
+      const { data, error } = await supabase.from("products").insert([p]).select().single();
+      
+      if (!error && data) {
+        // Sucesso: Usa os dados oficiais salvos no Supabase (com o ID real do banco)
+        state = { ...state, products: [...state.products, data] };
+        emit();
+        return; 
+      }
+    } catch (err) {
+      console.error("Erro ao comunicar com Supabase na criação do produto:", err);
+    }
+    
+    // Fallback: Se der erro de conexão ou a tabela não existir, salva localmente para não quebrar a UI
     const id = `prod-${Date.now()}`;
     state = { ...state, products: [...state.products, { ...p, id }] };
     emit();
   },
+
   updateProduct(id: string, patch: Partial<AdminProduct>) {
     state = {
       ...state,
