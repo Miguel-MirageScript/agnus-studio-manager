@@ -321,7 +321,11 @@ export const store = {
     emit();
   },
   deleteCategory(name: string) {
-    state = { ...state, categories: state.categories.filter((c) => c !== name) };
+    state = { 
+      ...state, 
+      categories: state.categories.filter((c) => c !== name),
+      products: state.products.filter((p) => p.category !== name) 
+    };
     emit();
   },
   setCategories(categories: string[]) {
