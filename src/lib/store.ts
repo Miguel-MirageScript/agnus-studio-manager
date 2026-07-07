@@ -44,7 +44,6 @@ export interface AdminProduct extends Product {
   category: string;
   stock: number;
   hangtag?: HangtagStyle;
-  backImage?: string; // Suporte para a segunda imagem que você pediu
 }
 
 export interface FooterLink {
@@ -90,7 +89,6 @@ function coerceTheme(raw: unknown): ThemeKey {
   return DEFAULT_THEME;
 }
 
-// O novo Reset de Fábrica limpo. Sem os produtos fantasmas antigos.
 function seedState(): State {
   return {
     products: [], 
@@ -169,10 +167,6 @@ function emitSave() {
   saveListeners.forEach((l) => l());
 }
 
-// ---------------------------------------------------------
-// EXPORTAÇÕES EXIGIDAS PELO BUILD (Isso impede o erro que você viu)
-// ---------------------------------------------------------
-
 export function useSaveStatus(): SaveStatus {
   return useSyncExternalStore(
     (cb) => {
@@ -209,6 +203,8 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
       brand_line: updatedSettings.brandLine,
       container_style: updatedSettings.theme,
       category_style: updatedSettings.theme,
+      catalog_products: state.products, // Persiste o array de produtos no banco de dados
+      catalog_categories: state.categories, // Persiste o array de categorias no banco de dados
       updated_at: new Date().toISOString(),
     });
 
@@ -232,16 +228,6 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
 export async function saveSettingsNow() {
   return syncSettingsToCloud(state.settings);
 }
-
-export function whatsappHref(productName: string, productId?: string, s: Settings = state.settings) {
-  const link = productId ? productLink(productId) : (typeof window !== "undefined" ? window.location.origin : "");
-  const msg = s.whatsappMessage
-    .replace(/\{product\}/g, productName)
-    .replace(/\{link\}/g, link);
-  return `https://wa.me/${s.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
-}
-
-// ---------------------------------------------------------
 
 async function fetchSettingsFromCloud() {
   if (safeUrl === "https://placeholder.supabase.co") {
@@ -274,7 +260,13 @@ async function fetchSettingsFromCloud() {
         theme: coerceTheme(data.container_style ?? data.category_style),
       };
 
-      state = { ...state, settings: cloudSettings, isLoaded: true };
+      state = { 
+        ...state, 
+        settings: cloudSettings, 
+        products: data.catalog_products || [], // Resgata produtos da nuvem
+        categories: data.catalog_categories || ["ORIGINAL A G N U S .¹⁹⁹³"], // Resgata categorias da nuvem
+        isLoaded: true 
+      };
     } else {
       state = { ...state, isLoaded: true };
     }
@@ -309,6 +301,7 @@ export const store = {
     const id = `prod-${Date.now()}`;
     state = { ...state, products: [...state.products, { ...p, id }] };
     emit();
+    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
   },
   updateProduct(id: string, patch: Partial<AdminProduct>) {
     state = {
@@ -316,41 +309,56 @@ export const store = {
       products: state.products.map((p) => (p.id === id ? { ...p, ...patch } : p)),
     };
     emit();
+    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
   },
   deleteProduct(id: string) {
     state = { ...state, products: state.products.filter((p) => p.id !== id) };
     emit();
+    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
   },
   addCategory(name: string) {
     if (!name.trim() || state.categories.includes(name)) return;
     state = { ...state, categories: [...state.categories, name.trim()] };
     emit();
+    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
   },
   deleteCategory(name: string) {
     state = { 
       ...state, 
       categories: state.categories.filter((c) => c !== name),
-      products: state.products.filter((p) => p.category !== name) // Apaga os produtos órfãos em cascata
+      products: state.products.filter((p) => p.category !== name) 
     };
     emit();
+    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
   },
   setCategories(categories: string[]) {
     state = { ...state, categories };
     emit();
+    syncSettingsToCloud(state.settings);
   },
   setProducts(products: AdminProduct[]) {
     state = { ...state, products };
     emit();
+    syncSettingsToCloud(state.settings);
   },
   reset() {
     state = seedState();
     emit();
+    syncSettingsToCloud(state.settings);
   },
 };
 
 export function productLink(productId: string) {
   if (typeof window === "undefined") return `/?p=${productId}`;
   return `${window.location.origin}/?p=${productId}`;
+}
+
+export function whatsappHref(productName: string, productId?: string, s: Settings = state.settings) {
+  const link = productId ? productLink(productId) : (typeof window !== "undefined" ? window.location.origin : "");
+  const msg = s.whatsappMessage
+    .replace(/\{product\}/g, productName)
+    .replace(/\{link\}/g, link);
+  return `https://wa.me/${s.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
 }
 
 export type { Product, StatusTag };
