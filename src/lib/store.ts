@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { PRODUCTS as SEED, type Product, type StatusTag } from "@/lib/products";
+import { type Product, type StatusTag } from "@/lib/products";
 import heroImg from "@/assets/hero-lookbook.jpg";
 import loopImg from "@/assets/lookbook-loop.jpg";
 import { createClient } from '@supabase/supabase-js';
@@ -44,6 +44,7 @@ export interface AdminProduct extends Product {
   category: string;
   stock: number;
   hangtag?: HangtagStyle;
+  backImage?: string; // Adicionado suporte para a segunda foto traseira
 }
 
 export interface FooterLink {
@@ -89,11 +90,11 @@ function coerceTheme(raw: unknown): ThemeKey {
   return DEFAULT_THEME;
 }
 
-// AQUI ESTÁ A MÁGICA: O novo Reset de Fábrica limpo.
+// O novo Reset de Fábrica limpo. Sem os produtos fantasmas.
 function seedState(): State {
   return {
-    products: [], // Inicia completamente vazio. Sem fantasmas genéricos.
-    categories: ["ORIGINAL A G N U S .¹⁹⁹³"], // Inicia apenas com a sua categoria principal.
+    products: [], 
+    categories: ["ORIGINAL A G N U S .¹⁹⁹³"], 
     settings: {
       whatsappNumber: "5511932212697",
       whatsappMessage:
