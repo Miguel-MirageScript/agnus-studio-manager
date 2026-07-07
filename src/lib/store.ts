@@ -13,30 +13,39 @@ const safeUrl = SUPABASE_URL.startsWith("http") ? SUPABASE_URL : "https://placeh
 const safeKey = SUPABASE_ANON_KEY.length > 10 ? SUPABASE_ANON_KEY : "placeholder_key";
 const supabase = createClient(safeUrl, safeKey);
 
-// 20 HANGTAG STYLES
-export type HangtagStyle =
-  | "classic" | "ribbon" | "seal" | "metallic" | "side-label" | "minimal-float" | "brutalist"
-  | "woven" | "blister" | "ticket" | "led" | "dogtag" | "pvc" | "acrylic"
-  | "wooden" | "care-label" | "rfid" | "holo-auth" | "velvet" | "wax-drip";
+// 20 TEMAS UNIFICADOS — controlam Container, Categoria e Etiqueta ao mesmo tempo.
+export type ThemeKey =
+  | "minimalist-luxury"
+  | "neo-brutalism"
+  | "cyberpunk"
+  | "vintage-polaroid"
+  | "y2k"
+  | "swiss-grid"
+  | "grunge-street"
+  | "glassmorphism"
+  | "arcade-8bit"
+  | "high-fashion"
+  | "tactical-techwear"
+  | "neumorphism"
+  | "holographic-foil"
+  | "kraft-paper"
+  | "caution-industrial"
+  | "acid-wash"
+  | "blueprint"
+  | "pop-art"
+  | "dark-elegance"
+  | "vaporwave";
 
-// 20 PRODUCT CARD CONTAINERS
-export type ContainerStyle =
-  | "minimal" | "soft" | "brutalist" | "elegant" | "neo-brutalism"
-  | "cyberpunk" | "polaroid" | "glass" | "swiss" | "blueprint"
-  | "neumorphism" | "synthwave" | "high-fashion" | "grunge" | "y2k"
-  | "terminal" | "holographic" | "kraft" | "editorial" | "sci-fi";
-
-// 20 CATEGORY TYPOGRAPHY STYLES
-export type CategoryStyle =
-  | "serif-italic" | "wide-sans" | "stamp" | "vogue" | "caution" | "outline"
-  | "neon-sign" | "extruded-3d" | "glitch" | "marker" | "arcade-pixel"
-  | "gold-foil" | "ransom" | "marquee" | "blur-reveal" | "cyber-tech"
-  | "stencil" | "bubblegum" | "blackletter" | "vertical" | "tape-emboss";
+// Aliases legados para não quebrar código existente que ainda importe estes tipos.
+export type ContainerStyle = ThemeKey;
+export type CategoryStyle = ThemeKey;
+export type HangtagStyle = ThemeKey;
 
 export interface AdminProduct extends Product {
   category: string;
   stock: number;
-  hangtag: HangtagStyle;
+  /** Mantido por compatibilidade — a etiqueta é gerada pelo tema global. */
+  hangtag?: HangtagStyle;
 }
 
 export interface FooterLink {
@@ -57,8 +66,8 @@ export interface Settings {
   footerTagline: string;
   footerLinks: FooterLink[];
   brandLine: string;
-  containerStyle: ContainerStyle;
-  categoryStyle: CategoryStyle;
+  /** Tema global unificado (container + categoria + hangtag). */
+  theme: ThemeKey;
 }
 
 interface State {
@@ -69,13 +78,25 @@ interface State {
 }
 
 const KEY = "agnus_admin_store_v1";
+const DEFAULT_THEME: ThemeKey = "minimalist-luxury";
+
+const VALID_THEMES = new Set<ThemeKey>([
+  "minimalist-luxury","neo-brutalism","cyberpunk","vintage-polaroid","y2k",
+  "swiss-grid","grunge-street","glassmorphism","arcade-8bit","high-fashion",
+  "tactical-techwear","neumorphism","holographic-foil","kraft-paper",
+  "caution-industrial","acid-wash","blueprint","pop-art","dark-elegance","vaporwave",
+]);
+
+function coerceTheme(raw: unknown): ThemeKey {
+  if (typeof raw === "string" && VALID_THEMES.has(raw as ThemeKey)) return raw as ThemeKey;
+  return DEFAULT_THEME;
+}
 
 function seedState(): State {
   const products: AdminProduct[] = SEED.map((p, i) => ({
     ...p,
     category: i % 2 === 0 ? "Camisetas" : "Edições Limitadas",
     stock: p.tags.includes("ESGOTADO") ? 0 : 12,
-    hangtag: (["classic", "ribbon", "seal"] as HangtagStyle[])[i % 3],
   }));
   return {
     products,
@@ -98,8 +119,7 @@ function seedState(): State {
         { label: "FAQ", href: "#" },
       ],
       brandLine: "AGNUS.1993",
-      containerStyle: "swiss",
-      categoryStyle: "vogue",
+      theme: DEFAULT_THEME,
     },
     isLoaded: false,
   };
@@ -113,12 +133,17 @@ function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return seedState();
-    const parsed = JSON.parse(raw) as State;
+    const parsed = JSON.parse(raw) as Partial<State> & { settings?: Partial<Settings> & { containerStyle?: string; categoryStyle?: string } };
     const seed = seedState();
+    const legacyTheme = parsed.settings?.containerStyle || parsed.settings?.categoryStyle;
     return {
       ...seed,
       ...parsed,
-      settings: { ...seed.settings, ...parsed.settings },
+      settings: {
+        ...seed.settings,
+        ...(parsed.settings || {}),
+        theme: coerceTheme(parsed.settings?.theme ?? legacyTheme),
+      },
       isLoaded: false,
     };
   } catch {
@@ -166,10 +191,12 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
     console.warn("Ligue as suas chaves do Supabase no store.ts para gravar!");
     return;
   }
-  
+
   saveStatus = "saving";
   emitSave();
   try {
+    // Escreve o tema em `container_style` e `category_style` (colunas existentes) para
+    // preservar retrocompatibilidade sem exigir alteração de schema.
     const { error } = await supabase.from("site_settings").upsert({
       id: "main_config",
       whatsapp_number: updatedSettings.whatsappNumber,
@@ -184,13 +211,13 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
       footer_tagline: updatedSettings.footerTagline,
       footer_links: updatedSettings.footerLinks,
       brand_line: updatedSettings.brandLine,
-      container_style: updatedSettings.containerStyle,
-      category_style: updatedSettings.categoryStyle,
+      container_style: updatedSettings.theme,
+      category_style: updatedSettings.theme,
       updated_at: new Date().toISOString(),
     });
-    
+
     if (error) throw error;
-    
+
     saveStatus = "saved";
     emitSave();
     setTimeout(() => {
@@ -212,12 +239,11 @@ export async function saveSettingsNow() {
 
 async function fetchSettingsFromCloud() {
   if (safeUrl === "https://placeholder.supabase.co") {
-    // Se as chaves não estiverem configuradas, carrega os dados locais e retira o ecrã de carregamento
     state = { ...state, isLoaded: true };
     emit();
     return;
   }
-  
+
   try {
     const { data, error } = await supabase
       .from("site_settings")
@@ -226,7 +252,7 @@ async function fetchSettingsFromCloud() {
       .single();
 
     if (data && !error) {
-      const cloudSettings = {
+      const cloudSettings: Settings = {
         whatsappNumber: data.whatsapp_number || state.settings.whatsappNumber,
         whatsappMessage: data.whatsapp_message || state.settings.whatsappMessage,
         instagramUrl: data.instagram_url || state.settings.instagramUrl,
@@ -239,10 +265,9 @@ async function fetchSettingsFromCloud() {
         footerTagline: data.footer_tagline || state.settings.footerTagline,
         footerLinks: data.footer_links || state.settings.footerLinks,
         brandLine: data.brand_line || state.settings.brandLine,
-        containerStyle: (data.container_style as ContainerStyle) || state.settings.containerStyle,
-        categoryStyle: (data.category_style as CategoryStyle) || state.settings.categoryStyle,
+        theme: coerceTheme(data.container_style ?? data.category_style),
       };
-      
+
       state = { ...state, settings: cloudSettings, isLoaded: true };
     } else {
       state = { ...state, isLoaded: true };

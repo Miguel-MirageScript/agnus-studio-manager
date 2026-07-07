@@ -24,12 +24,13 @@ export function ProductManager() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const save = async (fileToUpload: File | null) => {
+  const save = async (fileToUpload: File | null, backFileToUpload: File | null) => {
     if (!editing || !editing.name.trim()) return;
     setLoading(true);
 
     try {
       let finalImageUrl = editing.image;
+      let finalBackImageUrl = editing.backImage ?? "";
 
       if (fileToUpload) {
         if (editing.id) {
@@ -39,7 +40,15 @@ export function ProductManager() {
         finalImageUrl = await uploadToSupabase(fileToUpload);
       }
 
-      const updatedDraft = { ...editing, image: finalImageUrl };
+      if (backFileToUpload) {
+        if (editing.id) {
+          const oldProduct = products.find((p) => p.id === editing.id);
+          if (oldProduct && oldProduct.backImage) await deleteFromSupabase(oldProduct.backImage);
+        }
+        finalBackImageUrl = await uploadToSupabase(backFileToUpload);
+      }
+
+      const updatedDraft = { ...editing, image: finalImageUrl, backImage: finalBackImageUrl };
 
       if (editing.id) {
         store.updateProduct(editing.id, updatedDraft);

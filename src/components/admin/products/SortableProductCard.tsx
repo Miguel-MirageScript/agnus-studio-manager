@@ -44,7 +44,7 @@ export function SortableProductCard({
         ) : (
           <Icon icon="ph:image-square-thin" className="w-12 h-12 text-black/10" />
         )}
-        <Hangtag style={product.hangtag} label={product.tags[0] ?? "AGNUS.93"} />
+        <Hangtag label={product.tags[0] ?? "AGNUS.93"} />
       </div>
 
       <div className="mt-4">
