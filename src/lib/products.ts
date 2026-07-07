@@ -1,364 +1,160 @@
-import { useSyncExternalStore } from "react";
-import { type Product, type StatusTag } from "@/lib/products";
-import heroImg from "@/assets/hero-lookbook.jpg";
-import loopImg from "@/assets/lookbook-loop.jpg";
-import { createClient } from '@supabase/supabase-js';
+import teeBlack from "@/assets/tee-black.jpg";
 
-// 👇 ATENÇÃO: COLOQUE AS SUAS CHAVES REAIS DO SUPABASE AQUI 👇
-const SUPABASE_URL = "https://jypmxfhaxcniztkswueb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
+import teeWhite from "@/assets/tee-white.jpg";
 
-// Proteção anti-crash
-const safeUrl = SUPABASE_URL.startsWith("http") ? SUPABASE_URL : "https://placeholder.supabase.co";
-const safeKey = SUPABASE_ANON_KEY.length > 10 ? SUPABASE_ANON_KEY : "placeholder_key";
-const supabase = createClient(safeUrl, safeKey);
+import teeCream from "@/assets/tee-cream.jpg";
 
-// 20 TEMAS UNIFICADOS
-export type ThemeKey =
-  | "minimalist-luxury"
-  | "neo-brutalism"
-  | "cyberpunk"
-  | "vintage-polaroid"
-  | "y2k"
-  | "swiss-grid"
-  | "grunge-street"
-  | "glassmorphism"
-  | "arcade-8bit"
-  | "high-fashion"
-  | "tactical-techwear"
-  | "neumorphism"
-  | "holographic-foil"
-  | "kraft-paper"
-  | "caution-industrial"
-  | "acid-wash"
-  | "blueprint"
-  | "pop-art"
-  | "dark-elegance"
-  | "vaporwave";
 
-export type ContainerStyle = ThemeKey;
-export type CategoryStyle = ThemeKey;
-export type HangtagStyle = ThemeKey;
 
-export interface AdminProduct extends Product {
-  category: string;
-  stock: number;
-  hangtag?: HangtagStyle;
+export type StatusTag =
+
+  | "PRONTA ENTREGA"
+
+  | "SOB ENCOMENDA"
+
+  | "NOVO DROP"
+
+  | "LIMITADO"
+
+  | "ESGOTADO"
+
+  | "PROMOÇÃO";
+
+
+
+export interface Product {
+
+  id: string;
+
+  name: string;
+
+  price: number;
+
+  image: string;
+
+  /** Imagem opcional das costas / detalhe de arte. */
+
+  backImage?: string;
+
+  tags: StatusTag[];
+
+  filters: ("novidades" | "mais-vendidos" | "pronta-entrega" | "limitados")[];
+
 }
 
-export interface FooterLink {
-  label: string;
-  href: string;
-}
 
-export interface Settings {
-  whatsappNumber: string;
-  whatsappMessage: string;
-  instagramUrl: string;
-  announcement: string;
-  heroTitle: string;
-  heroImage: string;
-  heroTextColor: string;
-  lookbookTitle: string;
-  lookbookImages: string[];
-  footerTagline: string;
-  footerLinks: FooterLink[];
-  brandLine: string;
-  theme: ThemeKey;
-}
 
-interface State {
-  products: AdminProduct[];
-  categories: string[];
-  settings: Settings;
-  isLoaded: boolean;
-}
+export const PRODUCTS: Product[] = [
 
-const KEY = "agnus_admin_store_v1";
-const DEFAULT_THEME: ThemeKey = "minimalist-luxury";
+  {
 
-const VALID_THEMES = new Set<ThemeKey>([
-  "minimalist-luxury","neo-brutalism","cyberpunk","vintage-polaroid","y2k",
-  "swiss-grid","grunge-street","glassmorphism","arcade-8bit","high-fashion",
-  "tactical-techwear","neumorphism","holographic-foil","kraft-paper",
-  "caution-industrial","acid-wash","blueprint","pop-art","dark-elegance","vaporwave",
-]);
+    id: "agnus-oversized-black",
 
-function coerceTheme(raw: unknown): ThemeKey {
-  if (typeof raw === "string" && VALID_THEMES.has(raw as ThemeKey)) return raw as ThemeKey;
-  return DEFAULT_THEME;
-}
+    name: "AGNUS OVERSIZED TEE",
 
-function seedState(): State {
-  return {
-    products: [], 
-    categories: ["ORIGINAL A G N U S .¹⁹⁹³"], 
-    settings: {
-      whatsappNumber: "5511932212697",
-      whatsappMessage:
-        "Olá! Gostaria de negociar a peça *{product}* que vi no catálogo. Link: {link}",
-      instagramUrl: "https://instagram.com/agnus.1993",
-      announcement: "FRETE GRÁTIS ACIMA DE R$ 350 — NOVO DROP.93",
-      heroTitle: "LOOKBOOK.",
-      heroImage: heroImg,
-      heroTextColor: "#0a0a0a",
-      lookbookTitle: "Lookbook Loop",
-      lookbookImages: [loopImg, loopImg, loopImg],
-      footerTagline: "Luxury Streetwear",
-      footerLinks: [
-        { label: "Guia de Tamanhos", href: "#" },
-        { label: "Sobre a Marca", href: "#" },
-        { label: "FAQ", href: "#" },
-      ],
-      brandLine: "AGNUS.1993",
-      theme: DEFAULT_THEME,
-    },
-    isLoaded: false,
-  };
-}
+    price: 28,
 
-let state: State = load();
-const listeners = new Set<() => void>();
+    image: teeBlack,
 
-function load(): State {
-  if (typeof window === "undefined") return seedState();
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return seedState();
-    const parsed = JSON.parse(raw) as Partial<State> & { settings?: Partial<Settings> & { containerStyle?: string; categoryStyle?: string } };
-    const seed = seedState();
-    const legacyTheme = parsed.settings?.containerStyle || parsed.settings?.categoryStyle;
-    return {
-      ...seed,
-      ...parsed,
-      settings: {
-        ...seed.settings,
-        ...(parsed.settings || {}),
-        theme: coerceTheme(parsed.settings?.theme ?? legacyTheme),
-      },
-      isLoaded: false,
-    };
-  } catch {
-    return seedState();
-  }
-}
+    backImage: teeWhite,
 
-function persist() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {}
-}
+    tags: ["PRONTA ENTREGA"],
 
-function emit() {
-  persist();
-  listeners.forEach((l) => l());
-}
+    filters: ["pronta-entrega", "mais-vendidos"],
 
-function subscribe(cb: () => void) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
-let saveStatus: SaveStatus = "idle";
-const saveListeners = new Set<() => void>();
-
-function emitSave() {
-  saveListeners.forEach((l) => l());
-}
-
-export function useSaveStatus(): SaveStatus {
-  return useSyncExternalStore(
-    (cb) => {
-      saveListeners.add(cb);
-      return () => saveListeners.delete(cb);
-    },
-    () => saveStatus,
-    () => saveStatus,
-  );
-}
-
-async function syncSettingsToCloud(updatedSettings: Settings) {
-  if (safeUrl === "https://placeholder.supabase.co") {
-    console.warn("Ligue as suas chaves do Supabase no store.ts para gravar!");
-    return;
-  }
-
-  saveStatus = "saving";
-  emitSave();
-  try {
-    const { error } = await supabase.from("site_settings").upsert({
-      id: "main_config",
-      whatsapp_number: updatedSettings.whatsappNumber,
-      whatsapp_message: updatedSettings.whatsappMessage,
-      instagram_url: updatedSettings.instagramUrl,
-      announcement: updatedSettings.announcement,
-      hero_title: updatedSettings.heroTitle,
-      hero_image: updatedSettings.heroImage,
-      hero_text_color: updatedSettings.heroTextColor,
-      lookbook_title: updatedSettings.lookbookTitle,
-      lookbook_images: updatedSettings.lookbookImages,
-      footer_tagline: updatedSettings.footerTagline,
-      footer_links: updatedSettings.footerLinks,
-      brand_line: updatedSettings.brandLine,
-      container_style: updatedSettings.theme,
-      category_style: updatedSettings.theme,
-      catalog_products: state.products, // Persiste o array de produtos no banco de dados
-      catalog_categories: state.categories, // Persiste o array de categorias no banco de dados
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) throw error;
-
-    saveStatus = "saved";
-    emitSave();
-    setTimeout(() => {
-      if (saveStatus === "saved") {
-        saveStatus = "idle";
-        emitSave();
-      }
-    }, 2200);
-  } catch (err) {
-    console.error("Falha ao gravar no Supabase:", err);
-    saveStatus = "error";
-    emitSave();
-  }
-}
-
-export async function saveSettingsNow() {
-  return syncSettingsToCloud(state.settings);
-}
-
-async function fetchSettingsFromCloud() {
-  if (safeUrl === "https://placeholder.supabase.co") {
-    state = { ...state, isLoaded: true };
-    emit();
-    return;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("site_settings")
-      .select("*")
-      .eq("id", "main_config")
-      .single();
-
-    if (data && !error) {
-      const cloudSettings: Settings = {
-        whatsappNumber: data.whatsapp_number || state.settings.whatsappNumber,
-        whatsappMessage: data.whatsapp_message || state.settings.whatsappMessage,
-        instagramUrl: data.instagram_url || state.settings.instagramUrl,
-        announcement: data.announcement || state.settings.announcement,
-        heroTitle: data.hero_title || state.settings.heroTitle,
-        heroImage: data.hero_image || state.settings.heroImage,
-        heroTextColor: data.hero_text_color || state.settings.heroTextColor,
-        lookbookTitle: data.lookbook_title || state.settings.lookbookTitle,
-        lookbookImages: data.lookbook_images && data.lookbook_images.length > 0 ? data.lookbook_images : state.settings.lookbookImages,
-        footerTagline: data.footer_tagline || state.settings.footerTagline,
-        footerLinks: data.footer_links || state.settings.footerLinks,
-        brandLine: data.brand_line || state.settings.brandLine,
-        theme: coerceTheme(data.container_style ?? data.category_style),
-      };
-
-      state = { 
-        ...state, 
-        settings: cloudSettings, 
-        products: data.catalog_products || [], // Resgata produtos da nuvem
-        categories: data.catalog_categories || ["ORIGINAL A G N U S .¹⁹⁹³"], // Resgata categorias da nuvem
-        isLoaded: true 
-      };
-    } else {
-      state = { ...state, isLoaded: true };
-    }
-  } catch (err) {
-    console.error("Erro ao resgatar configurações em nuvem:", err);
-    state = { ...state, isLoaded: true };
-  } finally {
-    emit();
-  }
-}
-
-if (typeof window !== "undefined") {
-  fetchSettingsFromCloud();
-}
-
-export function useStore<T>(sel: (s: State) => T): T {
-  return useSyncExternalStore(
-    subscribe,
-    () => sel(state),
-    () => sel(state),
-  );
-}
-
-export const store = {
-  get: () => state,
-  setSettings(patch: Partial<Settings>) {
-    state = { ...state, settings: { ...state.settings, ...patch } };
-    emit();
-    syncSettingsToCloud(state.settings);
   },
-  addProduct(p: Omit<AdminProduct, "id">) {
-    const id = `prod-${Date.now()}`;
-    state = { ...state, products: [...state.products, { ...p, id }] };
-    emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
-  },
-  updateProduct(id: string, patch: Partial<AdminProduct>) {
-    state = {
-      ...state,
-      products: state.products.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-    };
-    emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
-  },
-  deleteProduct(id: string) {
-    state = { ...state, products: state.products.filter((p) => p.id !== id) };
-    emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
-  },
-  addCategory(name: string) {
-    if (!name.trim() || state.categories.includes(name)) return;
-    state = { ...state, categories: [...state.categories, name.trim()] };
-    emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
-  },
-  deleteCategory(name: string) {
-    state = { 
-      ...state, 
-      categories: state.categories.filter((c) => c !== name),
-      products: state.products.filter((p) => p.category !== name) 
-    };
-    emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
-  },
-  setCategories(categories: string[]) {
-    state = { ...state, categories };
-    emit();
-    syncSettingsToCloud(state.settings);
-  },
-  setProducts(products: AdminProduct[]) {
-    state = { ...state, products };
-    emit();
-    syncSettingsToCloud(state.settings);
-  },
-  reset() {
-    state = seedState();
-    emit();
-    syncSettingsToCloud(state.settings);
-  },
-};
 
-export function productLink(productId: string) {
-  if (typeof window === "undefined") return `/?p=${productId}`;
-  return `${window.location.origin}/?p=${productId}`;
-}
+  {
 
-export function whatsappHref(productName: string, productId?: string, s: Settings = state.settings) {
-  const link = productId ? productLink(productId) : (typeof window !== "undefined" ? window.location.origin : "");
-  const msg = s.whatsappMessage
-    .replace(/\{product\}/g, productName)
-    .replace(/\{link\}/g, link);
-  return `https://wa.me/${s.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
-}
+    id: "agnus-oversized-white",
 
-export type { Product, StatusTag };
+    name: "AGNUS OVERSIZED TEE",
+
+    price: 29,
+
+    image: teeWhite,
+
+    backImage: teeCream,
+
+    tags: ["SOB ENCOMENDA"],
+
+    filters: ["mais-vendidos"],
+
+  },
+
+  {
+
+    id: "agnus-edition-cream",
+
+    name: "AGNUS-EDITION DESIGN",
+
+    price: 29,
+
+    image: teeCream,
+
+    tags: ["NOVO DROP", "LIMITADO"],
+
+    filters: ["novidades", "limitados"],
+
+  },
+
+  {
+
+    id: "agnus-classic-black",
+
+    name: "AGNUS CLASSIC TEE",
+
+    price: 26,
+
+    image: teeBlack,
+
+    tags: ["PROMOÇÃO"],
+
+    filters: ["mais-vendidos"],
+
+  },
+
+  {
+
+    id: "agnus-classic-white",
+
+    name: "AGNUS CLASSIC TEE",
+
+    price: 26,
+
+    image: teeWhite,
+
+    tags: ["ESGOTADO"],
+
+    filters: [],
+
+  },
+
+  {
+
+    id: "agnus-limited-cream",
+
+    name: "AGNUS LIMITED DROP",
+
+    price: 32,
+
+    image: teeCream,
+
+    backImage: teeBlack,
+
+    tags: ["LIMITADO", "PRONTA ENTREGA"],
+
+    filters: ["limitados", "pronta-entrega", "novidades"],
+
+  },
+
+];
+
+
+
+export const WHATSAPP_NUMBER = "5511932212697";
+
+export const WHATSAPP_LINK = (productName: string) =>
+
+  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Gostaria de negociar a camiseta *${productName}* que vi no catálogo.`)}`; 
+
