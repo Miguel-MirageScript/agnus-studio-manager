@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { type Product, type StatusTag } from "@/lib/products";
+import { PRODUCTS as SEED, type Product, type StatusTag } from "@/lib/products";
 import heroImg from "@/assets/hero-lookbook.jpg";
 import loopImg from "@/assets/lookbook-loop.jpg";
 import { createClient } from '@supabase/supabase-js';
