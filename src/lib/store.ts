@@ -4,10 +4,14 @@ import heroImg from "@/assets/hero-lookbook.jpg";
 import loopImg from "@/assets/lookbook-loop.jpg";
 import { createClient } from '@supabase/supabase-js';
 
-// A MÁGICA ESTÁ AQUI: Usando as chaves reais e automáticas do seu projeto!
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+// 👇 ATENÇÃO: COLOQUE AS SUAS CHAVES REAIS DO SUPABASE AQUI 👇
+const SUPABASE_URL = "https://jypmxfhaxcniztkswueb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cG14ZmhheGNuaXp0a3N3dWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTAxMjEsImV4cCI6MjA5ODQ4NjEyMX0.zHttmS0Q1M2qIxMhsOjlf7xNDScwpLfWV0BGVtqu3nE";
+
+// Proteção anti-crash (impede o erro que viu no ecrã)
+const safeUrl = SUPABASE_URL.startsWith("http") ? SUPABASE_URL : "https://placeholder.supabase.co";
+const safeKey = SUPABASE_ANON_KEY.length > 10 ? SUPABASE_ANON_KEY : "placeholder_key";
+const supabase = createClient(safeUrl, safeKey);
 
 // 20 HANGTAG STYLES
 export type HangtagStyle =
@@ -79,7 +83,7 @@ function seedState(): State {
     settings: {
       whatsappNumber: "5511932212697",
       whatsappMessage:
-        "Olá! Gostaria de negociar a camiseta *{product}* que vi no catálogo. Link: {link}",
+        "Olá! Gostaria de negociar a peça *{product}* que vi no catálogo. Link: {link}",
       instagramUrl: "https://instagram.com/agnus.1993",
       announcement: "FRETE GRÁTIS ACIMA DE R$ 350 — NOVO DROP.93",
       heroTitle: "LOOKBOOK.",
@@ -138,13 +142,14 @@ function subscribe(cb: () => void) {
   return () => listeners.delete(cb);
 }
 
-// ---------- Cloud save state ----------
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 let saveStatus: SaveStatus = "idle";
 const saveListeners = new Set<() => void>();
+
 function emitSave() {
   saveListeners.forEach((l) => l());
 }
+
 export function useSaveStatus(): SaveStatus {
   return useSyncExternalStore(
     (cb) => {
@@ -157,7 +162,11 @@ export function useSaveStatus(): SaveStatus {
 }
 
 async function syncSettingsToCloud(updatedSettings: Settings) {
-  if (!supabaseUrl) return; // Trava de segurança caso falte a chave
+  if (safeUrl === "https://placeholder.supabase.co") {
+    console.warn("Ligue as suas chaves do Supabase no store.ts para gravar!");
+    return;
+  }
+  
   saveStatus = "saving";
   emitSave();
   try {
@@ -179,7 +188,9 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
       category_style: updatedSettings.categoryStyle,
       updated_at: new Date().toISOString(),
     });
+    
     if (error) throw error;
+    
     saveStatus = "saved";
     emitSave();
     setTimeout(() => {
@@ -189,7 +200,7 @@ async function syncSettingsToCloud(updatedSettings: Settings) {
       }
     }, 2200);
   } catch (err) {
-    console.error("Falha ao salvar no Supabase:", err);
+    console.error("Falha ao gravar no Supabase:", err);
     saveStatus = "error";
     emitSave();
   }
@@ -199,9 +210,9 @@ export async function saveSettingsNow() {
   return syncSettingsToCloud(state.settings);
 }
 
-// Puxa as configurações reais salvas na nuvem assim que o app inicia
 async function fetchSettingsFromCloud() {
-  if (!supabaseUrl) {
+  if (safeUrl === "https://placeholder.supabase.co") {
+    // Se as chaves não estiverem configuradas, carrega os dados locais e retira o ecrã de carregamento
     state = { ...state, isLoaded: true };
     emit();
     return;
@@ -215,7 +226,6 @@ async function fetchSettingsFromCloud() {
       .single();
 
     if (data && !error) {
-      // Atualiza o estado mesclando os dados da nuvem com extrema segurança
       const cloudSettings = {
         whatsappNumber: data.whatsapp_number || state.settings.whatsappNumber,
         whatsappMessage: data.whatsapp_message || state.settings.whatsappMessage,
@@ -245,7 +255,6 @@ async function fetchSettingsFromCloud() {
   }
 }
 
-// Dispara a busca em nuvem imediatamente
 if (typeof window !== "undefined") {
   fetchSettingsFromCloud();
 }
@@ -263,7 +272,6 @@ export const store = {
   setSettings(patch: Partial<Settings>) {
     state = { ...state, settings: { ...state.settings, ...patch } };
     emit();
-    // Dispara o salvamento em nuvem em segundo plano sem travar a interface
     syncSettingsToCloud(state.settings);
   },
   addProduct(p: Omit<AdminProduct, "id">) {
