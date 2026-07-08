@@ -13,9 +13,7 @@ export interface ThemeCard {
   imgClass?: string;
   overlay?: ReactNode;
   frame?: ReactNode;
-  /** Torna o botão em largura automática (para estilos minimalistas). */
   autoWidthButton?: boolean;
-  /** Desativa o "lift" no hover (para estilos de sombra dura). */
   disableHoverLift?: boolean;
 }
 
