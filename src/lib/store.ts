@@ -301,7 +301,7 @@ export const store = {
     const id = `prod-${Date.now()}`;
     state = { ...state, products: [...state.products, { ...p, id }] };
     emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
+    syncSettingsToCloud(state.settings); 
   },
   updateProduct(id: string, patch: Partial<AdminProduct>) {
     state = {
@@ -309,18 +309,30 @@ export const store = {
       products: state.products.map((p) => (p.id === id ? { ...p, ...patch } : p)),
     };
     emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
+    syncSettingsToCloud(state.settings); 
   },
   deleteProduct(id: string) {
     state = { ...state, products: state.products.filter((p) => p.id !== id) };
     emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
+    syncSettingsToCloud(state.settings); 
   },
   addCategory(name: string) {
     if (!name.trim() || state.categories.includes(name)) return;
     state = { ...state, categories: [...state.categories, name.trim()] };
     emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
+    syncSettingsToCloud(state.settings); 
+  },
+  updateCategory(oldName: string, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed || state.categories.includes(trimmed)) return;
+
+    state = { 
+      ...state, 
+      categories: state.categories.map((c) => c === oldName ? trimmed : c),
+      products: state.products.map((p) => p.category === oldName ? { ...p, category: trimmed } : p) 
+    };
+    emit();
+    syncSettingsToCloud(state.settings);
   },
   deleteCategory(name: string) {
     state = { 
@@ -329,7 +341,7 @@ export const store = {
       products: state.products.filter((p) => p.category !== name) 
     };
     emit();
-    syncSettingsToCloud(state.settings); // Envia para o Supabase instantaneamente
+    syncSettingsToCloud(state.settings); 
   },
   setCategories(categories: string[]) {
     state = { ...state, categories };
