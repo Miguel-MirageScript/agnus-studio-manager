@@ -26,6 +26,13 @@ export function CategoryManager() {
     store.setCategories(arrayMove(categories, oldIdx, newIdx));
   };
 
+  const handleAddCategory = () => {
+    if (newCat.trim()) {
+      store.addCategory(newCat.trim());
+      setNewCat("");
+    }
+  };
+
   return (
     <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
       <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold mb-4 flex items-center gap-2 text-black/60">
@@ -47,16 +54,17 @@ export function CategoryManager() {
         <input
           value={newCat}
           onChange={(e) => setNewCat(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAddCategory();
+            }
+          }}
           placeholder="Criar nova categoria..."
           className="flex-1 rounded-xl border border-black/15 px-4 py-2.5 text-sm outline-none focus:border-foreground bg-neutral-50"
         />
         <button
-          onClick={() => {
-            if (newCat.trim()) {
-              store.addCategory(newCat.trim());
-              setNewCat("");
-            }
-          }}
+          onClick={handleAddCategory}
           className="rounded-xl bg-foreground text-background px-5 text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--gold)] transition"
         >
           Adicionar
