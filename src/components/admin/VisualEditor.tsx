@@ -34,6 +34,7 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
   const [editing, setEditing] = useState<EditMode>(null);
   const settings = useStore((s) => s.settings);
   const products = useStore((s) => s.products);
+  const categories = useStore((s) => s.categories);
 
   const openEdit = (m: EditMode) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -81,19 +82,28 @@ export function VisualEditor({ onExit }: { onExit: () => void }) {
             </div>
           </div>
 
-          <div onClick={openEdit("grid")} className={`${zone} p-4 sm:p-8 bg-neutral-50/50`}>
+          {/* O container "grid" original transformado na renderização real das categorias */}
+          <div onClick={openEdit("grid")} className={`${zone} p-4 sm:p-8 bg-neutral-50/50 flex flex-col gap-10`}>
             <EditBadge label="Editar Estilo da Grade" />
 
-            <div className="mb-6 flex items-center gap-4">
-              <CategoryHeading name="Camisetas" />
-              <div className="h-[1px] flex-1 bg-black/10" />
-            </div>
+            {categories.map((category) => {
+              const categoryProducts = products.filter((p) => p.category === category);
+              if (categoryProducts.length === 0) return null;
 
-            <div className="pointer-events-none grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              {products.slice(0, 4).map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
+              return (
+                <section key={category} className="w-full">
+                  <div className="mb-6 flex items-center gap-4">
+                    <CategoryHeading name={category} />
+                    <div className="h-[1px] flex-1 bg-black/10" />
+                  </div>
+                  <div className="pointer-events-none grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    {categoryProducts.map((p) => (
+                      <ProductCard key={p.id} product={p} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
 
           <div onClick={openEdit("lookbook")} className={zone}>
