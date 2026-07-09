@@ -6,6 +6,11 @@ export function HeaderEditor() {
   return (
     <>
       <TextField
+        label="Nome da Marca (Cabeçalho)"
+        value={settings.brandLine}
+        onChange={(v) => store.setSettings({ brandLine: v })}
+      />
+      <TextField
         label="URL do Instagram"
         value={settings.instagramUrl}
         onChange={(v) => store.setSettings({ instagramUrl: v })}
