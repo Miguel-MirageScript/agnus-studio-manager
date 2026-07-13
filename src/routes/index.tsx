@@ -11,6 +11,15 @@ import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
+  meta: () => [
+    { title: "AGNUS.1993 — Luxury Store" },
+    { property: "og:title", content: "AGNUS.1993 — Luxury Store" },
+    { property: "og:description", content: "Explore nossa coleção exclusiva de roupas de luxo." },
+    { property: "og:image", content: "/og-image.png" },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: "/og-image.png" },
+  ],
 });
 
 function HomePage() {
