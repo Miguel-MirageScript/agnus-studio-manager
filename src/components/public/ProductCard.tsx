@@ -50,9 +50,9 @@ export function ProductCard({ product }: { product: AdminProduct }) {
           alt={product.name}
           loading="lazy"
           className={cn(
-            "h-full w-full object-cover transition-all duration-500 group-hover:scale-105 animate-in fade-in",
-            // Removido o mix-blend-multiply e filtros de tema para garantir que a foto original apareça 100% nítida
-            current.includes(".png") ? "p-6 object-contain" : ""
+            "h-full w-full transition-all duration-500 group-hover:scale-105 animate-in fade-in",
+            // Correção: Aplicando o padding (p-6) e object-contain para TODOS os formatos de imagem
+            "p-6 object-contain"
           )}
         />
         <Hangtag label={primaryTag} theme={theme} />
