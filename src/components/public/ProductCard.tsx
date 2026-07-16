@@ -118,7 +118,7 @@ export function ProductCard({ product }: { product: AdminProduct }) {
             disabled && "opacity-40 grayscale cursor-not-allowed pointer-events-none",
           )}
         >
-          <span>{disabled ? "Esgotado" : "FAZER PEDIDO"}</span>
+          <span>{disabled ? "Esgotado" : "FECHAR NO WHATS"}</span>
           <span className={cn("flex items-center justify-center transition-transform group-hover/btn:scale-110", v.buttonIcon)}>
             <Icon icon="ic:baseline-whatsapp" className="w-4 h-4" />
           </span>
